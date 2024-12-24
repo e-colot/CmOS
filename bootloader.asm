@@ -8,8 +8,8 @@ start:
 ; Bootloader code starts here
 
 main:
-	mov ax, 0x07C0  ; Set up data segment
-	mov ds, ax
+	mov ax, 0x7C00  ; Set up data segment
+	;mov ds, ax
 	mov es, ax
 	
 	mov si, hello_msg   ; Print a welcome message
@@ -19,6 +19,7 @@ main:
 	call print_string
 	
 	call read_char	  ; Read a character from keyboard
+	PUSH ax
 	
 	mov si, newline	 ; Move cursor to the next line
 	call print_string
@@ -26,6 +27,7 @@ main:
 	mov si, echo_msg	; Print the character that was entered
 	call print_string
 	
+	POP ax
 	call print_char	 ; Print the character
 	
 	jmp $			   ; Infinite loop
