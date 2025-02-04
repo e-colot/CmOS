@@ -1,0 +1,68 @@
+\documentclass[a4paper,12pt]{article}
+
+% Language and encoding
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[english]{babel}
+
+% Mathematics and symbols
+\usepackage{amsmath, amssymb, amsfonts}
+
+% Figures and images
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{subcaption}
+
+% Tables
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{xcolor}
+
+% Code listings
+\usepackage{listings}
+\usepackage{courier}
+\lstset{
+    basicstyle=\ttfamily\footnotesize,
+    keywordstyle=\color{blue}\bfseries,
+    commentstyle=\color{gray},
+    stringstyle=\color{red},
+    breaklines=true
+}
+
+% Hyperlinks
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    citecolor=red,
+    urlcolor=cyan
+}
+
+% Page layout
+\usepackage{geometry}
+\geometry{a4paper, margin=1in}
+
+% Title information
+\title{CmOS}
+\date{2025}
+\begin{document}
+
+\maketitle
+
+
+\section{Introduction}
+
+In this file, the main concepts used to build CmOS (\textit{C modeled OS}) will be detailed. The objective of this report is to complete the content of the comments that can be found in the code.\\
+The goal of this project is to understand and apply the main principles of an OS without having to struggle with time demanding parts such as assembly code, bootloader, drivers and so on. Because it is a simulation of an OS done in C, it suits better to the definition of an hypervisor with a single virtual machine than to the one of an operating system.
+
+\section{Storage}
+
+\subsection{Generalities}
+
+The storage of CmOS is a file located in \texttt{bin/disk} with a parametric size. To interface with it, \texttt{src/disk.c} gives functions to initialize, write and read it.
+
+\section{Programs}
+
+\end{document}

@@ -1,0 +1,6 @@
+bin/*
+!bin/Makefile
+.vscode 
+doc/*
+!doc/*.tex
+!doc/*.pdf
