@@ -131,7 +131,6 @@ In the instruction table, the following convention is followed:
 \begin{itemize}
     \item r* refers to a register (4 bits)
     \item imm* refers to an immediate value
-    \item mem refers to a memory address (8 bits)
     \item $\star$ indicates an unused field
     \item an \textit{italic} field indicates an input
     \item a \textbf{bold} field indicates an output
@@ -141,8 +140,8 @@ In the instruction table, the following convention is followed:
     \centering
     \begin{tabular}{|c|c|c|c|c|r|}
         \hline
-        \multirow{2}{*}{Instruction} & \multirow{2}{*}{Op Code}  & \multirow{2}{*}{byte1} & \multirow{2}{*}{byte2} & 16 bit reg & \multirow{2}{*}{comment}\\
-         & & & & compatibility & \\
+        \multirow{2}{*}{Instruction} & \multirow{2}{*}{Op Code}  & \multirow{2}{*}{byte1} & \multirow{2}{*}{byte2} & 16 bit reg & \multicolumn{1}{c|}{\multirow{2}{*}{comment}}\\
+         & & & & compatibility & \multicolumn{1}{c|}{} \\
         \thickhline
         % 0x0- for bitwise operations
         \multirow{2}{*}{AND} & 0x00 & \textit{r1} \quad \textit{r2}  & $\star$ \quad \textbf{r3} & & \textbf{r3} = \textit{r1} AND \textit{r2}\\
@@ -155,13 +154,13 @@ In the instruction table, the following convention is followed:
         \hline
         NOT & 0x04 & \textit{r1} \quad \textbf{r2} & $\star$ & & \textbf{r2} = NOT \textit{r1} \\
         \hline
-        \multirow{2}{*}{SHL} & 0x04 & \textit{r1} \quad \textit{r2} & $\star$ \quad \textbf{r3} & $\bullet$ & \textbf{r3} = \textit{r1} $\ll$ \textit{r2} \\
+        \multirow{2}{*}{SHL} & 0x05 & \textit{r1} \quad \textit{r2} & $\star$ \quad \textbf{r3} & $\bullet$ & \textbf{r3} = \textit{r1} $\ll$ \textit{r2} \\
         \cline{2-6}
-                            & 0x05 & \textit{r1} \quad \textbf{r2} & \textit{imm8} & $\bullet$ & \textbf{r2} = \textit{r1} $\ll$ \textit{imm8} \\
+                            & 0x06 & \textit{r1} \quad \textbf{r2} & \textit{imm8} & $\bullet$ & \textbf{r2} = \textit{r1} $\ll$ \textit{imm8} \\
         \hline
-        \multirow{2}{*}{SHR} & 0x06 & \textit{r1} \quad \textit{r2} & $\star$ \quad \textbf{r3} & $\bullet$ & \textbf{r3} = \textit{r1} $\gg$ \textit{r2} \\
+        \multirow{2}{*}{SHR} & 0x07 & \textit{r1} \quad \textit{r2} & $\star$ \quad \textbf{r3} & $\bullet$ & \textbf{r3} = \textit{r1} $\gg$ \textit{r2} \\
         \cline{2-6}
-                            & 0x07 & \textit{r1} \quad \textbf{r2} & \textit{imm8} & $\bullet$ & \textbf{r2} = \textit{r1} $\gg$ \textit{imm8} \\
+                            & 0x08 & \textit{r1} \quad \textbf{r2} & \textit{imm8} & $\bullet$ & \textbf{r2} = \textit{r1} $\gg$ \textit{imm8} \\
         \thickhline
         % 0x1- for arithmetic operations
         \multirow{2}{*}{ADD} & 0x10 & \textit{r1} \quad \textit{r2}  & $\star$ \quad \textbf{r3} & $\bullet$ & \textbf{r3} = \textit{r1} + \textit{r2}\\
@@ -193,13 +192,17 @@ In the instruction table, the following convention is followed:
         \cline{2-6}
                              & 0x22 & \multicolumn{2}{c|}{\textit{imm16}} & $\bullet$ & \textbf{R16} = \textit{imm16} \\
         \hline
-        \multirow{2}{*}{LOAD} & 0x23 & $\star$ \quad \textbf{r1} & \textit{mem} & & \textbf{r1} = *(\textit{mem})\\
+        \multirow{2}{*}{LOAD} & 0x23 & $\star$ \quad \textbf{r1} & $\star$ & & \textbf{r1} = *(\textit{RSI})\\
         \cline{2-6}
-                             & 0x24 & \textit{mem} & $\star$ & $\bullet$ & \textbf{R16} = *(\textit{mem})\\
+                             & 0x24 & 0x00 & $\star$ & $\bullet$ & \textbf{R16} = *(\textit{RSI})\\
         \hline
-        \multirow{2}{*}{STORE} & 0x25 & $\star$ \quad \textit{r1} & \textbf{mem} & & *(\textbf{mem}) = \textit{r1}\\
+        \multirow{2}{*}{STORE} & 0x25 & $\star$ \quad \textit{r1} & $\star$ & & *(\textbf{RDI}) = \textit{r1}\\
         \cline{2-6}
-                             & 0x26 & \textbf{mem} & $\star$ & $\bullet$ & *(\textbf{mem}) = \textit{R16}\\
+                             & 0x26 & 0x00 & $\star$ & $\bullet$ & *(\textbf{RDI}) = \textit{R16}\\
+        \hline
+        REGDUMP & 0x27 & $\star$ & $\star$ & & stores all the registers in \textbf{RDI}\\
+        \hline
+        REGFILL & 0x28 & $\star$ & $\star$ & & loads \textit{RSI} in all the registers\\
         \thickhline
         % 0x3- for flags only operations
         CMP & 0x30 & \textit{r1} \quad \textit{r2} & $\star$ & $\bullet$ & raises \textbf{ZF}, \textbf{SF} for (\textit{r2} - \textit{r1})\\
@@ -214,16 +217,16 @@ In the instruction table, the following convention is followed:
         \multirow{2}{*}{SKIFZ} & \multirow{2}{*}{0x40} & \multirow{2}{*}{$\star$} & \multirow{2}{*}{$\star$} & & skip next instruction\\
          & & & & & if \textit{ZF} = 1\\
         \cline{2-6}
-        \multirow{2}{*}{SKIFNZ} & \multirow{2}{*}{0x40} & \multirow{2}{*}{$\star$} & \multirow{2}{*}{$\star$} & & skip next instruction\\
+        \multirow{2}{*}{SKIFNZ} & \multirow{2}{*}{0x41} & \multirow{2}{*}{$\star$} & \multirow{2}{*}{$\star$} & & skip next instruction\\
          & & & & & if \textit{ZF} = 0\\
         \cline{2-6}
         \thickhline
 
         % 0xF- for sys calls
-        PRNT & 0xF0 & \textit{mem} & $\star$ \quad \textit{r1} & $\bullet$ & prints \textit{r1} characters from \textit{mem}\\
+        PRNT & 0xF0 & $\star$ & $\star$ \quad \textit{r1} & $\bullet$ & prints \textit{r1} characters from \textit{RSI}\\
         \hline
 
-        HALT & 0xFF & $\star$ & $\star$ & & stops the CPU\\
+        HLT & 0xFF & $\star$ & $\star$ & & stops the CPU\\
         \hline  
     \end{tabular}
     \caption{8-bit instruction set}

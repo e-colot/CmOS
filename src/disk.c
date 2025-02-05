@@ -50,7 +50,7 @@ void diskRead(size_t diskPos, char* mem, size_t memPos, size_t len) {
     size_t diskSize = getDiskSize();
     if (diskPos + len <= diskSize) {
         int disk = open("disk", O_RDONLY, 0644);
-        //lseek(disk, diskPos, SEEK_SET);
+        lseek(disk, diskPos, SEEK_SET);
         size_t memPtr = (size_t)mem + memPos;
         read(disk, (void*)memPtr, len);
         close(disk);
