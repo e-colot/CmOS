@@ -74,6 +74,10 @@ The goal of this project is to understand and apply the main principles of an OS
 
 The storage of CmOS is a file located in \texttt{bin/disk} with a parametric size. To interface with it, \texttt{src/disk.c} gives functions to initialize, write and read it.
 
+\subsection{Organization of a file in CmOS}
+
+A file starts with 2 bytes that indicates where the first instruction is located. It is then followed by all the variables used in the program.
+
 \section{Programs}
 
 \subsection{Generalities}
@@ -173,17 +177,17 @@ In the instruction table, the following convention is followed:
         \cline{2-6}
                              & 0x14 & \textit{imm8} &  \textit{r1} \quad \textbf{r2} & & \textbf{r2} = \textit{imm8} - \textit{r1}\\
         \hline
-        \multirow{2}{*}{MUL} & 0x15 & \textit{r1} \quad \textit{r2}  & $\star$ & $\bullet$ & \textbf{R16} = \textit{r1} * \textit{r2}\\
+        \multirow{2}{*}{MUL} & 0x15 & \textit{r1} \quad \textit{r2}  & $\star$ & & \textbf{R16} = \textit{r1} * \textit{r2}\\
         \cline{2-6}
-                             & 0x16 & \textit{r1} \quad $\star$  & \textit{imm8} & $\bullet$ & \textbf{R16} = \textit{r1} * \textit{imm8}\\
+                             & 0x16 & $\star$ \quad \textit{r1}  & \textit{imm8} & & \textbf{R16} = \textit{r1} * \textit{imm8}\\
         \hline
-        \multirow{2}{*}{IDIV}& 0x17 & \textit{r1} \quad \textbf{r2}  & $\star$ & $\bullet$ & \textbf{r2} = \textit{R16} // \textit{r1}\\
+        \multirow{2}{*}{IDIV}& 0x17 & \textit{r1} \quad \textbf{r2}  & $\star$ & & \textbf{r2} = \textit{R16} // \textit{r1}\\
         \cline{2-6}
-                             & 0x18 & \textit{imm8} & $\star$ \quad \textbf{r1} & $\bullet$ & \textbf{r1} = \textit{R16} // \textit{imm8}\\
+                             & 0x18 & \textit{imm8} & $\star$ \quad \textbf{r1} & & \textbf{r1} = \textit{R16} // \textit{imm8}\\
         \hline
-        \multirow{2}{*}{MOD} & 0x19 & \textit{r1} \quad \textbf{r2}  & $\star$ & $\bullet$ & \textbf{r2} = \textit{R16} mod \textit{r1}\\
+        \multirow{2}{*}{MOD} & 0x19 & \textit{r1} \quad \textbf{r2}  & $\star$ & & \textbf{r2} = \textit{R16} mod \textit{r1}\\
         \cline{2-6}
-                             & 0x1A & \textit{imm8} & $\star$ \quad \textbf{r1} & $\bullet$ & \textbf{r1} = \textit{R16} mod \textit{imm8}\\
+                             & 0x1A & \textit{imm8} & $\star$ \quad \textbf{r1} & & \textbf{r1} = \textit{R16} mod \textit{imm8}\\
         \thickhline
         % 0x2- for storage and memory access
         \multirow{3}{*}{MOV} & 0x20 & \textit{r1} \quad \textbf{r2} & $\star$ & $\bullet$ & \textbf{r2} = \textit{r1}\\
@@ -194,11 +198,11 @@ In the instruction table, the following convention is followed:
         \hline
         \multirow{2}{*}{LOAD} & 0x23 & $\star$ \quad \textbf{r1} & $\star$ & & \textbf{r1} = *(\textit{RSI})\\
         \cline{2-6}
-                             & 0x24 & 0x00 & $\star$ & $\bullet$ & \textbf{R16} = *(\textit{RSI})\\
+                             & 0x24 & $\star$ & $\star$ & & \textbf{R16} = *(\textit{RSI})\\
         \hline
         \multirow{2}{*}{STORE} & 0x25 & $\star$ \quad \textit{r1} & $\star$ & & *(\textbf{RDI}) = \textit{r1}\\
         \cline{2-6}
-                             & 0x26 & 0x00 & $\star$ & $\bullet$ & *(\textbf{RDI}) = \textit{R16}\\
+                             & 0x26 & $\star$ & $\star$ & & *(\textbf{RDI}) = \textit{R16}\\
         \hline
         REGDUMP & 0x27 & $\star$ & $\star$ & & stores all the registers in \textbf{RDI}\\
         \hline
@@ -207,10 +211,10 @@ In the instruction table, the following convention is followed:
         % 0x3- for flags only operations
         CMP & 0x30 & \textit{r1} \quad \textit{r2} & $\star$ & $\bullet$ & raises \textbf{ZF}, \textbf{SF} for (\textit{r2} - \textit{r1})\\
         \hline
-        \multirow{4}{*}{TEST} & \multirow{2}{*}{0x31} & \multirow{2}{*}{\textit{r1} \quad \textit{r2}} & \multirow{2}{*}{$\star$} & & raises \textbf{ZF} for \\
+        \multirow{4}{*}{TEST} & \multirow{2}{*}{0x31} & \multirow{2}{*}{\textit{r1} \quad \textit{r2}} & \multirow{2}{*}{$\star$} & \multirow{2}{*}{$\bullet$} & raises \textbf{ZF} for \\
          & & & & & \textit{r1} AND 0b1 $\ll$ \textit{r2}\\
         \cline{2-6}
-                             & \multirow{2}{*}{0x32} & \multirow{2}{*}{\textit{r1} \quad $\star$} & \multirow{2}{*}{\textit{imm8}} & \multirow{2}{*}{$\bullet$} & raises \textbf{ZF} for \\
+                             & \multirow{2}{*}{0x32} & \multirow{2}{*}{$\star$ \quad \textit{r1}} & \multirow{2}{*}{\textit{imm8}} & \multirow{2}{*}{$\bullet$} & raises \textbf{ZF} for \\
                              & & & & & \textit{r1} AND 0b1 $\ll$ \textit{imm8}\\
         \thickhline
         % 0x4- for conditions
@@ -223,7 +227,7 @@ In the instruction table, the following convention is followed:
         \thickhline
 
         % 0xF- for sys calls
-        PRNT & 0xF0 & $\star$ & $\star$ \quad \textit{r1} & $\bullet$ & prints \textit{r1} characters from \textit{RSI}\\
+        PRNT & 0xF0 & $\star$ \quad \textit{r1} & $\star$ & $\bullet$ & prints \textit{r1} characters from \textit{RSI}\\
         \hline
 
         HLT & 0xFF & $\star$ & $\star$ & & stops the CPU\\
@@ -232,6 +236,10 @@ In the instruction table, the following convention is followed:
     \caption{8-bit instruction set}
     \label{tab:8bit_instructions}
 \end{table}
+
+\subsection{Program syntax}
+
+To write code, you start by defining what will be stored in memory by declaring 1 byte at a time using \texttt{DB} and then you start writing your code using the instruction set table. There is no punctuation and no way to write comments.
 
 
 

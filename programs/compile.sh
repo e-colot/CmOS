@@ -1,14 +1,15 @@
+printf "\n"
 echo "Usage: ./compile.sh <file>"
+printf "\n"
 
 INPUT="src/"$1
 OUTPUT="bin/$(basename "$INPUT").machineCode"
 
-# Build the compiler
-cd ./compiler
-make
-cd ..
-
 # Run the compiler
-./compiler/compiler "$INPUT" "$OUTPUT"
+rm -f "$OUTPUT"
+
+cd ./compiler
+python3 compiler.py "$INPUT" "$OUTPUT"
 
 echo "Compiled: $OUTPUT"
+printf "\n\n"
