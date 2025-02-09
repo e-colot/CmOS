@@ -3,6 +3,7 @@
 #include <fcntl.h>    // For open()
 #include <unistd.h>   // For write() and close()
 #include <stdio.h>
+#include <stdlib.h>
 
 // getDiskSize not in disk.h as it is only used in this file
 size_t getDiskSize() {
@@ -17,7 +18,7 @@ size_t getDiskSize() {
     return diskSize;
 }
 
-void diskInit(size_t  dimensions) {
+void diskInit(size_t dimensions) {
     /*Clears the disk and fill it with only 0 for the length of dimensions*/
     int disk = open("disk", O_WRONLY | O_CREAT | O_TRUNC, 0644);
 
@@ -31,7 +32,6 @@ void diskInit(size_t  dimensions) {
         leftDim -= itrDim;
     }
     close(disk);
-
 }
 
 void diskWrite(size_t diskPos, char* data, size_t len) {
@@ -55,4 +55,37 @@ void diskRead(size_t diskPos, char* mem, size_t memPos, size_t len) {
         read(disk, (void*)memPtr, len);
         close(disk);
     }
+}
+
+void storeProgram(const char* filePath, size_t pos) {
+    // ai generated code
+    // Open the file
+    FILE* file = fopen(filePath, "rb");
+    if (!file) {
+        perror("Failed to open file");
+        return;
+    }
+
+    // Get the file size
+    fseek(file, 0, SEEK_END);
+    size_t fileSize = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    // Allocate memory to read the file
+    char* buffer = (char*)malloc(fileSize);
+    if (!buffer) {
+        perror("Failed to allocate memory");
+        fclose(file);
+        return;
+    }
+
+    // Read the file into the buffer
+    fread(buffer, 1, fileSize, file);
+    fclose(file);
+
+    // Write the buffer to the disk
+    diskWrite(pos, buffer, fileSize);
+
+    // Free the allocated memory
+    free(buffer);
 }

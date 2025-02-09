@@ -88,7 +88,8 @@ To begin with it, each instruction will consists of an instruction code followed
 
 \subsection{CPU}
 
-The CPU will have 16 bytes of registers. This way, a register can be accessed with a 4-bit identifiers. This allows any instruction to only take a maximum of 16 bits of arguments. These 16 bits can be up to 4 registers, 2 registers and an immediate byte value or an immediate 2 bytes value (disk address for example).
+The CPU will have 16 bytes of registers. This way, a register can be accessed with a 4-bit identifiers. This allows any instruction to only take a maximum of 16 bits of arguments. These 16 bits can be up to 4 registers, 2 registers and an immediate byte value or an immediate 2 bytes value (disk address for example).\\
+RL and RH appears in a non natural order because the 16-bit registers are stored in little-endian (LSB before MSB).
 
 \begin{table}[H]
     \centering
@@ -127,6 +128,8 @@ The CPU will have 16 bytes of registers. This way, a register can be accessed wi
     \caption{FLAGS register}
     \label{tab:flags}
 \end{table}
+
+A main difference between this simulation and a real OS is that here the OS will not run on the CPU. This means that there is no need for any interruptions as CmOS has full control on the CPU. This is because it is from the OS code that the CPU will be triggered.
 
 \subsection{Instruction set}
 \subsubsection{8-bit configuration}
@@ -239,7 +242,7 @@ In the instruction table, the following convention is followed:
 
 \subsection{Program syntax}
 
-To write code, you start by defining what will be stored in memory by declaring 1 byte at a time using \texttt{DB} and then you start writing your code using the instruction set table. There is no punctuation and no way to write comments.
+To write code, you start by defining what will be stored in memory by declaring 1 byte at a time using \texttt{DB}. In the middle of \texttt{DB} statements, you can use \texttt{DREG} to instantiate a 16-byte space to dump registers. After defining the memory, you can start writing your code using the instruction set table. Note that there is no punctuation and no way to write comments.
 
 
 

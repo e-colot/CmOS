@@ -4,3 +4,4 @@ bin/*
 doc/*
 !doc/*.tex
 !doc/*.pdf
+programs/bin/*

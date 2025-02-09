@@ -60,22 +60,32 @@ def loadFile(filenameIn, filenameOut):
             #empty lines get discarded
             continue
         cmd = cleanLine(line)
+        if len(cmd) == 0:
+            #comment lines get discarded
+            continue
         if (cmd[0] == "DB"):
             if (len(cmd) != 2 or not cmd[1].isdigit()):
                 raise ValueError(f"Invalid DB statement: {cmd}")
             data_bytes.append(int(cmd[1]))
+        elif (cmd[0] == "DREG"):
+            # Reserve 16 bytes for a register dump
+            if (len(cmd) != 1):
+                raise ValueError(f"Invalid DW statement: {cmd}")
+            for _ in range(16):
+                data_bytes.append(0)
         else:
             code_lines.append(translateLine(cmd))
     append_to_binary_file(filenameOut, data_bytes, code_lines)
 
 def cleanLine(line):
-  a = line.strip()
-  b = a.split(" ")
-  c = []
-  for i in b:
-    if i != "":
-      c.append(i)
-  return c
+    a = line.strip()
+    a = a.split("//") # Remove comments
+    b = a[0].split(" ")
+    c = []
+    for i in b:
+        if i != "":
+            c.append(i)
+    return c
 
 def translateLine(line):
     output = [0, 0, 0]
@@ -106,8 +116,10 @@ def translateLine(line):
                     elif(len(args) >= 2 and args[1] <= R16):
                         output[2] = REG.get(line[2])
                     elif(len(args) == 1):
-                        output[1] = 0
-                        output[2] = int(line[1])
+                        # for MOV IMM16 (where IMM16 is < 256)
+                        # in this order because of little-endian
+                        output[1] = int(line[1])
+                        output[2] = 0
                     else:
                         raise Exception("Unknown parameters") 
                 elif(len(args) >= 1 and args[0] <= R16):
@@ -115,7 +127,7 @@ def translateLine(line):
                     output[1] = REG.get(line[1])
                     if(len(args) == 1):
                         output[2] = 0
-                    elif(len(args >= 2 and args[1] == IMM8)):
+                    elif(len(args) >= 2 and args[1] == IMM8):
                         output[2] = int(line[2])
                     else:
                         raise Exception("Unknown parameters") 
@@ -123,8 +135,10 @@ def translateLine(line):
                     output[1] = 0
                     output[2] = 0
                 elif(len(args) == 1 and args[0] == IMM16):
-                    output[1] = int(line[1])//16
-                    output[2] = int(line[1])%16
+                    # for MOV IMM16
+                    # in this order because of little-endian
+                    output[1] = int(line[1])%16
+                    output[2] = int(line[1])//16
                 else:
                     raise Exception("Unknown parameters") 
     else:
@@ -153,7 +167,8 @@ def argType(arg_list):
 def append_to_binary_file(filename, data, code):
     with open("../" + filename, "ab") as file:  # Open in append binary mode
         # Write the length of data as a 16-bit value
-        instructionPtr = [len(data)//256, len(data)%256]
+        # modulo first and then division because of little-endian (least significant byte first)
+        instructionPtr = [len(data)%256, len(data)//256]
         file.write(bytes(instructionPtr))
         # Write each byte in data
         file.write(bytes(data))
