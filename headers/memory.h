@@ -2,7 +2,7 @@
 #include <stdlib.h>
 
 typedef struct {
-    char* mem;
+    unsigned char* mem;
 } Ram;
 
 Ram* createMemory();

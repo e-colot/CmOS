@@ -23,12 +23,12 @@ void diskInit(size_t dimensions) {
     int disk = open("disk", O_WRONLY | O_CREAT | O_TRUNC, 0644);
 
     //Writing 1024 bytes at a time
-    char buffer[1024] = {0};
+    unsigned char buffer[1024] = {0};
     size_t leftDim = dimensions;    // number of bytes left
     size_t itrDim;                  // number of bytes written at this itr
 
     // This part is theoretically done by the bootloader
-    char initialBuffer[] = {0xE0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF};
+    unsigned char initialBuffer[] = {0xE0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF};
         // 0xE0 to indicate the 3 first pages are used (bitmap + FAT)
         // 0xFF 0xFF at the end to indicate a FAT page
     itrDim = sizeof(initialBuffer);
@@ -43,7 +43,7 @@ void diskInit(size_t dimensions) {
     close(disk);
 }
 
-void diskWrite(size_t diskPos, char* data, size_t len) {
+void diskWrite(size_t diskPos, unsigned char* data, size_t len) {
     size_t diskSize = getDiskSize();
 
     if (diskPos + len <= diskSize) {
@@ -55,7 +55,7 @@ void diskWrite(size_t diskPos, char* data, size_t len) {
     }
 }
 
-void diskRead(size_t diskPos, char* mem, size_t memPos, size_t len) {
+void diskRead(size_t diskPos, unsigned char* mem, size_t memPos, size_t len) {
     size_t diskSize = getDiskSize();
     if (diskPos + len <= diskSize) {
         int disk = open("disk", O_RDONLY, 0644);

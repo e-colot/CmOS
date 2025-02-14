@@ -9,13 +9,18 @@
 #include "cpu.h"
 #include "os.h"
 
-
+// should disappear later
+#include "fileSystem.h"
 
 int main() {    
     
     diskInit(DISK_SIZE);
+    Ram* memory = createMemory();
 
     addFile("../programs/bin/multiplication", 0x25);
+    loadFile(0x25, memory->mem, 256);
+
+    printMem(memory);
 
     // Ram* memory = createMemory();
 
