@@ -2,7 +2,7 @@
 
 # Change directory to programs/
 cd programs/bin
-rm -f *.machineCode
+rm -f *
 cd ..
 
 printf "\n"

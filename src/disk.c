@@ -26,6 +26,15 @@ void diskInit(size_t dimensions) {
     char buffer[1024] = {0};
     size_t leftDim = dimensions;    // number of bytes left
     size_t itrDim;                  // number of bytes written at this itr
+
+    // This part is theoretically done by the bootloader
+    char initialBuffer[] = {0xE0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF};
+        // 0xE0 to indicate the 3 first pages are used (bitmap + FAT)
+        // 0xFF 0xFF at the end to indicate a FAT page
+    itrDim = sizeof(initialBuffer);
+    write(disk, initialBuffer, itrDim);
+    leftDim -= itrDim;
+
     while (leftDim > 0) {
         itrDim = (leftDim > 1024) ? 1024 : leftDim;
         write(disk, buffer, itrDim);
@@ -55,37 +64,4 @@ void diskRead(size_t diskPos, char* mem, size_t memPos, size_t len) {
         read(disk, (void*)memPtr, len);
         close(disk);
     }
-}
-
-void storeProgram(const char* filePath, size_t pos) {
-    // ai generated code
-    // Open the file
-    FILE* file = fopen(filePath, "rb");
-    if (!file) {
-        perror("Failed to open file");
-        return;
-    }
-
-    // Get the file size
-    fseek(file, 0, SEEK_END);
-    size_t fileSize = ftell(file);
-    fseek(file, 0, SEEK_SET);
-
-    // Allocate memory to read the file
-    char* buffer = (char*)malloc(fileSize);
-    if (!buffer) {
-        perror("Failed to allocate memory");
-        fclose(file);
-        return;
-    }
-
-    // Read the file into the buffer
-    fread(buffer, 1, fileSize, file);
-    fclose(file);
-
-    // Write the buffer to the disk
-    diskWrite(pos, buffer, fileSize);
-
-    // Free the allocated memory
-    free(buffer);
 }

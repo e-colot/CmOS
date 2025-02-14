@@ -3,7 +3,7 @@
 # printf "\n"
 
 INPUT="src/"$1
-OUTPUT="bin/$(basename "$INPUT").machineCode"
+OUTPUT="bin/$(basename "$INPUT")"
 
 # Run the compiler
 rm -f "$OUTPUT"
