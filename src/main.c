@@ -3,43 +3,78 @@
 #include <string.h>
 
 #include "devTools.h"
-#include "constants.h"
-#include "disk.h"
-#include "memory.h"
-#include "cpu.h"
 #include "os.h"
 
 // should disappear later
 #include "fileSystem.h"
 
+void writeEraseTest(Computer* comp) {
+    addFile("../programs/bin/multiplication", 0x25);
+    loadFile(0x25, comp->memory->mem, 256);
+
+    printBitmap();
+    printf("\n");
+    printFAT();
+
+    removeFile(0x25);
+    printf("File removed\n");
+
+    printBitmap();
+    printf("\n");
+    printFAT();
+}
+
+void multiPageFATTest() {
+    // test is 6 bytes -> 1 page per file
+    addFile("../programs/bin/test", 0x25);
+    addFile("../programs/bin/test", 0x26);
+    addFile("../programs/bin/test", 0x27);
+    addFile("../programs/bin/test", 0x28);
+    addFile("../programs/bin/test", 0x29);
+    addFile("../programs/bin/test", 0x2A);
+    addFile("../programs/bin/test", 0x2B);
+
+    printBitmap();
+    printf("\n");
+    printFAT();
+    printf("\n\n");
+
+    addFile("../programs/bin/test", 0x2C);
+    addFile("../programs/bin/test", 0x2D);
+    addFile("../programs/bin/test", 0x2E);
+
+    printBitmap();
+    printf("\n");
+    printFAT();
+}
+
+removeFATPageTest() {
+    addFile("../programs/bin/test", 0x25);
+    addFile("../programs/bin/test", 0x26);
+    addFile("../programs/bin/test", 0x27);
+    addFile("../programs/bin/test", 0x28);
+    addFile("../programs/bin/test", 0x29);
+    addFile("../programs/bin/test", 0x2A);
+    addFile("../programs/bin/test", 0x2B);
+
+    printFAT();
+    printf("\n\n");
+
+    removeFile(0x2A);
+
+    printBitmap();
+    printf("\n");
+    printFAT();
+}
+
 int main() {    
     
-    diskInit(DISK_SIZE);
-    Ram* memory = createMemory();
+    Computer* comp = boot();
 
-    addFile("../programs/bin/multiplication", 0x25);
-    loadFile(0x25, memory->mem, 256);
+    // writeEraseTest(comp);
+    multiPageFATTest();
 
-    printMem(memory);
-
-    // Ram* memory = createMemory();
-
-    // diskRead(500, memory->mem, 0, 256);
-
-    // Reg* reg = createReg();
-    // setRI(reg, memory, 0);
-
-
-    // while (runCode(reg, memory)) {
-    //     //DEBUG
-    //     //printReg(reg);
-    // }
-    
-    // printf("End of program\n");
-
-    // diskWrite(0, memory->mem, 256);
-    // // stores the memory back to the disk for debugging purposes
-    
+    shutdown(comp);
     return 0;
 
 }

@@ -1,6 +1,8 @@
 #include "devTools.h"
 #include <stdio.h>
 
+#include "disk.h" // For diskRead
+
 void printCharList(unsigned char* list, size_t len) {
     // Iterate over each element in the list and print its value
     for (size_t i = 0; i < len; i++) {
@@ -27,4 +29,43 @@ void printReg(Reg* reg) {
 
 void printMem(Ram* memory) {
     printCharList(memory->mem, 256);
+}
+
+void printBitmap() {
+    unsigned char* bitmap = malloc(32);
+    diskRead(0, bitmap, 0, 32);
+    for (size_t i = 0; i < 32; i++) {
+        // in binary
+        printf("%d%d%d%d%d%d%d%d  ", 
+            (bitmap[i] & 0b10000000) >> 7, 
+            (bitmap[i] & 0b01000000) >> 6, 
+            (bitmap[i] & 0b00100000) >> 5, 
+            (bitmap[i] & 0b00010000) >> 4, 
+            (bitmap[i] & 0b00001000) >> 3, 
+            (bitmap[i] & 0b00000100) >> 2, 
+            (bitmap[i] & 0b00000010) >> 1, 
+            (bitmap[i] & 0b00000001));
+        if (i % 8 == 7) {
+            printf("\n");
+        }
+    }
+    free(bitmap);
+}
+
+void printFAT() {
+    unsigned char* fat = malloc(16);
+    unsigned char pageIndex = 2;
+    diskRead(pageIndex*16, fat, 0, 16);
+    while (pageIndex != 0xFF) {
+        for (size_t i = 0; i < 16; i++) {
+            printf("%02X ", fat[i]);
+            if (i % 2 == 1) {
+                printf("\n");
+            }
+        }
+        printf("End of FAT page\n");
+        pageIndex = fat[1];
+        diskRead(pageIndex*16, fat, 0, 16);
+    }
+    free(fat);
 }

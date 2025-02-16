@@ -45,13 +45,15 @@ unsigned char getFreePage() {
         page = (unsigned char)rand() % 255;
     }
     free(bitmap);
+
     return page;
 }
 
 void updateBitmap(unsigned char page) {
     unsigned char* bitmap = malloc(32);
     diskRead(0, bitmap, 0, 32);
-    bitmap[page/8] |= 0b1 << (7-(page%8));
+    bitmap[page/8] ^= 0b1 << (7-(page%8));
+    // XORing to toggle the bit
     diskWrite(0, bitmap, 32);
     free(bitmap);
 }
@@ -61,30 +63,84 @@ void addToFAT(unsigned char ID, unsigned char page) {
     unsigned char pageIndex = 2;
         // 2 because pages 0 and 1 are reserved for the bitmap
     getPage(pageIndex, fat);
-    char written = 0;
-    while (*(unsigned short*)fat == 0xFFFF) {
+    while (*fat == 0xFF) {
         for (char i = 1; i < 8; i++) {
             if (*(fat + i*2) == 0x00) {
                 *(fat + i*2) = ID;
                 *(fat + i*2 + 1) = page;
                 setPage(pageIndex, fat);
-                written = 1;
-                break;
+                free(fat);
+                return;
             }
         }
-        if (written) {
+        if (*(fat + 1) == 0xFF) {
+            // it was the last FAT page
             break;
         }
-        pageIndex++;
+        pageIndex = *(fat + 1);
         getPage(pageIndex, fat);
     }
     // all FAT pages are full -> create a new one
     
-    // TODO later
-    // reported as it would need to eventually move a page that would happen to be next to the last FAT page
+    unsigned char newPageIndex = getFreePage();
+    updateBitmap(newPageIndex);
+    *(fat + 1) = newPageIndex;
+    // stores the modified FAT page
+    setPage(pageIndex, fat);
+    
+    for (size_t i = 0; i < 16; i++) {
+        if (i < 2) {
+            fat[i] = 0xFF;
+            // 1st byte to 0xFF as it is a FAT page
+            // 2nd byte to 0xFF as it is the last FAT page
+        } 
+        // adding the new file to the new FAT page
+        else if (i == 2) {
+            fat[i] = ID;
+        }
+        else if (i == 3) {
+            fat[i] = page;
+        }
+        // the rest of the page is empty
+        else {
+            fat[i] = 0x00;
+        }
+    }
+    setPage(newPageIndex, fat);
 
     free(fat);
-    
+}
+
+unsigned char removeFromFat(unsigned char ID) {
+
+    // TODO : remove FAT page if it was the last entry
+    // TODO : reorganize FAT pages
+
+    // remove the file from the FAT and return the first page address
+    unsigned char* fat = malloc(16);
+    unsigned char pageIndex = 2;
+    getPage(pageIndex, fat);
+    while (*fat == 0xFF) {
+        for (char i = 1; i < 8; i++) {
+            if (*(fat + i*2) == ID) {
+                *(fat + i*2) = 0x00;
+                // no need to remove previous page
+                unsigned char ret = *(fat + i*2 + 1);
+                setPage(pageIndex, fat);
+                free(fat);
+                return ret;
+            }
+        }
+        pageIndex = *(fat + 1);
+        getPage(pageIndex, fat);
+    }
+    free(fat);
+    perror("Trying to remove a non-existing file");
+    return 255;
+}
+
+void reorganizeFAT() {
+    // TODO
 }
 
 unsigned char searchFAT(unsigned char ID) {
@@ -93,7 +149,7 @@ unsigned char searchFAT(unsigned char ID) {
         // 2 because pages 0 and 1 are reserved for the bitmap
     unsigned char page = 0;
     getPage(pageIndex, fat);
-    while (*(unsigned short*)fat == 0xFFFF) {
+    while (*fat == 0xFF) {
         for (char i = 1; i < 8; i++) {
             if (*(fat + i*2) == ID) {
                 page = *(fat + i*2 + 1);
@@ -103,7 +159,7 @@ unsigned char searchFAT(unsigned char ID) {
         if (page != 0) {
             break;
         }
-        pageIndex++;
+        pageIndex = *(fat + 1);
         getPage(pageIndex, fat);
     }
     if (page == 0) {
@@ -158,15 +214,7 @@ void loadFile(unsigned char ID, unsigned char* mem, size_t len) {
     
     // Step 1: get the number of pages
     unsigned char firstPageIndex = searchFAT(ID);
-    unsigned char* buffer = malloc(1);
-    *(buffer) = firstPageIndex;
-    unsigned char pagesNbr = 1;
-    diskRead(*(buffer)*16, buffer, 0, 1);
-    while (*(buffer) != 0x00) {
-        diskRead(*(buffer)*16, buffer, 0, 1);
-        pagesNbr++;
-    }
-    free(buffer);
+    size_t pagesNbr = getFileSize(ID);
     if (len < pagesNbr*15) {
         perror("Memory too small");
     }
@@ -185,5 +233,30 @@ void loadFile(unsigned char ID, unsigned char* mem, size_t len) {
         }
         pageIndex = pageBuffer[0];
     }
+}
+
+void removeFile(unsigned char ID) {
+    unsigned char index = removeFromFat(ID);
+    unsigned char* buffer = malloc(16);
+    do {
+        getPage(index, buffer);
+        updateBitmap(index);
+        index = *buffer;
+    }
+    while(*buffer != 0x00);
+}
+
+size_t getFileSize(unsigned char ID) {
+    unsigned char firstPageIndex = searchFAT(ID);
+    unsigned char* buffer = malloc(1);
+    *(buffer) = firstPageIndex;
+    size_t pagesNbr = 1;
+    diskRead(*(buffer)*16, buffer, 0, 1);
+    while (*(buffer) != 0x00) {
+        diskRead(*(buffer)*16, buffer, 0, 1);
+        pagesNbr++;
+    }
+    free(buffer);
+    return pagesNbr;
 }
 

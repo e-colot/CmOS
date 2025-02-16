@@ -78,7 +78,7 @@ The storage of CmOS is a file located in \texttt{bin/disk} with a parametric siz
 
 The files will be split in pages of 16 bytes. It is a small amount but as the system built is quite small, it is enough. \\
 Because the whole storage is 4kB, there is room for 256 pages. The first 2 pages will be used to store a bitmap (needing 256 bits which corresponds to 32 bytes).\\
-This will be followed by a file allocation table (FAT). Because of the unrealistically small size of the storage, the programs will not be named but will be attributed with a 1 byte identifier. The next byte will be a pointer to the page at which the file starts. In addition to this, each page that compose the FAT will start with twice 0xFF to differentiate it from a program page. This means that the FAT will take 7 programs per used page.\\
+This will be followed by the first part of the file allocation table (FAT). Because of the unrealistically small size of the storage, the programs will not be named but will be attributed with a 1 byte identifier. The next byte will be a pointer to the page at which the file starts. In addition to this, each page that compose the FAT will start with 0xFF to differentiate it from a program page. The following byte will be 0xFF if it is the last page of the FAT, otherwise, it points to the address of the next page. This means that the FAT will take 7 programs per used page (2 bytes used and 2 bytes per program).\\
 Each page will start with a 1 byte pointer to the next page. This pointer will be set to 0x00 for the last page of the file.
 
 \section{Programs}
@@ -87,7 +87,7 @@ Each page will start with a 1 byte pointer to the next page. This pointer will b
 
 For a classic OS, this step would not have been necessary because the programs are written in machine code and that is what is then run by the computer. However, the choice of building a dedicated simple low-level language has been made such that small programs can run on CmOS.\\
 To begin with it, each instruction will consists of an instruction code followed by up to 3 arguments. The RAM size that was set at the beginning was 256 bytes, which leads to an 8-bit architecture so any pointer can be stored.
-%In a way to make it more flexible, it will be able to run in either 8-bit or 16-bit configuration. this means that an instruction can consist of 4 or 8 bytes.
+%In a way to make it more flexible, it will be able to run in either 8-bit or 16-bit configuration. this means that an instruction can consist of 4 or 8 bytes. (a thing said before realizing what it would imply)
 
 \subsection{CPU}
 
