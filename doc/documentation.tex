@@ -78,7 +78,8 @@ The storage of CmOS is a file located in \texttt{bin/disk} with a parametric siz
 
 The files will be split in pages of 16 bytes. It is a small amount but as the system built is quite small, it is enough. \\
 Because the whole storage is 4kB, there is room for 256 pages. The first 2 pages will be used to store a bitmap (needing 256 bits which corresponds to 32 bytes).\\
-This will be followed by the first part of the file allocation table (FAT). Because of the unrealistically small size of the storage, the programs will not be named but will be attributed with a 1 byte identifier. The next byte will be a pointer to the page at which the file starts. In addition to this, each page that compose the FAT will start with 0xFF to differentiate it from a program page. The following byte will be 0xFF if it is the last page of the FAT, otherwise, it points to the address of the next page. This means that the FAT will take 7 programs per used page (2 bytes used and 2 bytes per program).\\
+This will be followed by the first part of the file allocation table (FAT). Because of the unrealistically small size of the storage, the programs will not be named but will be attributed with a 1 byte identifier. The next byte will be a pointer to the page at which the file starts. \\
+In addition to this, each page that compose the FAT will start with a 2 bytes header that will create a double chained list. This means that the first byte of a FAT page will point to the previous FAT page (\texttt{0x00} if first page) and the second byte points to the next FAT page (\texttt{0x00} if last page). This means that the FAT will take 7 programs per used page (2 bytes used and 2 bytes per program).\\
 Each page will start with a 1 byte pointer to the next page. This pointer will be set to 0x00 for the last page of the file.
 
 \section{Programs}

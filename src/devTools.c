@@ -55,17 +55,16 @@ void printBitmap() {
 void printFAT() {
     unsigned char* fat = malloc(16);
     unsigned char pageIndex = 2;
-    diskRead(pageIndex*16, fat, 0, 16);
-    while (pageIndex != 0xFF) {
+    while (pageIndex) {
+        diskRead(pageIndex*16, fat, 0, 16);
         for (size_t i = 0; i < 16; i++) {
             printf("%02X ", fat[i]);
             if (i % 2 == 1) {
                 printf("\n");
             }
         }
-        printf("End of FAT page\n");
+        printf("\nEnd of FAT page\n\n");
         pageIndex = fat[1];
-        diskRead(pageIndex*16, fat, 0, 16);
     }
     free(fat);
 }

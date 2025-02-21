@@ -8,6 +8,15 @@
 // should disappear later
 #include "fileSystem.h"
 
+void writeTest(Computer* comp) {
+    addFile("../programs/bin/multiplication", 0x25);
+    loadFile(0x25, comp->memory->mem, 256);
+
+    printBitmap();
+    printf("\n");
+    printFAT();
+}
+
 void writeEraseTest(Computer* comp) {
     addFile("../programs/bin/multiplication", 0x25);
     loadFile(0x25, comp->memory->mem, 256);
@@ -25,7 +34,7 @@ void writeEraseTest(Computer* comp) {
 }
 
 void multiPageFATTest() {
-    // test is 6 bytes -> 1 page per file
+    // test is < 15 bytes -> 1 page per file
     addFile("../programs/bin/test", 0x25);
     addFile("../programs/bin/test", 0x26);
     addFile("../programs/bin/test", 0x27);
@@ -48,7 +57,7 @@ void multiPageFATTest() {
     printFAT();
 }
 
-removeFATPageTest() {
+void removeFATPageTest() {
     addFile("../programs/bin/test", 0x25);
     addFile("../programs/bin/test", 0x26);
     addFile("../programs/bin/test", 0x27);
@@ -56,11 +65,16 @@ removeFATPageTest() {
     addFile("../programs/bin/test", 0x29);
     addFile("../programs/bin/test", 0x2A);
     addFile("../programs/bin/test", 0x2B);
+    // this will be in the second FAT page
+    addFile("../programs/bin/test", 0x2C);
 
     printFAT();
     printf("\n\n");
 
-    removeFile(0x2A);
+    // removes the program on the last FAT page
+    // removeFile(0x2C);
+    // removes a program on the first FAT page
+    removeFile(0x27);
 
     printBitmap();
     printf("\n");
@@ -71,8 +85,10 @@ int main() {
     
     Computer* comp = boot();
 
+    // writeTest(comp);
     // writeEraseTest(comp);
-    multiPageFATTest();
+    // multiPageFATTest();
+    removeFATPageTest();
 
     shutdown(comp);
     return 0;
