@@ -8,18 +8,18 @@
 // should disappear later
 #include "fileSystem.h"
 
-void writeTest(Computer* comp) {
+void writeTest(Ram* memory) {
     addFile("../programs/bin/multiplication", 0x25);
-    loadFile(0x25, comp->memory->mem, 256);
+    loadFile(0x25, memory->mem, 256);
 
     printBitmap();
     printf("\n");
     printFAT();
 }
 
-void writeEraseTest(Computer* comp) {
+void writeEraseTest(Ram* memory) {
     addFile("../programs/bin/multiplication", 0x25);
-    loadFile(0x25, comp->memory->mem, 256);
+    loadFile(0x25, memory->mem, 256);
 
     printBitmap();
     printf("\n");
@@ -83,14 +83,14 @@ void removeFATPageTest() {
 
 int main() {    
     
-    Computer* comp = boot();
+    Computer* computer = boot();
 
-    // writeTest(comp);
-    // writeEraseTest(comp);
+    // writeTest(computer->memory);
+    // writeEraseTest(computer->memory);
     // multiPageFATTest();
     removeFATPageTest();
 
-    shutdown(comp);
+    shutdown(computer);
     return 0;
 
 }
