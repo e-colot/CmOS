@@ -1,4 +1,5 @@
 #include "disk.h"
+#include "constants.h"
 #include <sys/stat.h> // For fstat()
 #include <fcntl.h>    // For open()
 #include <unistd.h>   // For write() and close()
@@ -27,19 +28,28 @@ void diskInit(size_t dimensions) {
     size_t leftDim = dimensions;    // number of bytes left
     size_t itrDim;                  // number of bytes written at this itr
 
-    // This part is theoretically done by the bootloader
-    unsigned char initialBuffer[] = {0xE0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-        // 0xE0 to indicate the 3 first pages are used (bitmap + FAT)
-        // 0x00 0x00 as defined by the 2 bytes header of the FAT
-    itrDim = sizeof(initialBuffer);
-    write(disk, initialBuffer, itrDim);
-    leftDim -= itrDim;
-
     while (leftDim > 0) {
         itrDim = (leftDim > 1024) ? 1024 : leftDim;
         write(disk, buffer, itrDim);
         leftDim -= itrDim;
     }
+
+    // initiate the bitmap by setting '1' on the bitmap address + 1st FAT table
+    size_t bitmapSize = (BITMAP_PAGES + 1) / 8 + 1; 
+    unsigned char* bitmap = calloc(bitmapSize, sizeof(unsigned char));
+    size_t index = 0;
+    size_t bit = 0;
+    size_t bitsLeft = BITMAP_PAGES + 1;
+    while(!bitsLeft) {
+        *(bitmap+index) = *(bitmap+index) | (0x80 >> bit);
+        if (++bit == 8) {
+            index += 1;
+            bit = 0;
+        }
+    }
+    write(disk, bitmap, bitmapSize);
+    free(bitmap);
+
     close(disk);
 }
 

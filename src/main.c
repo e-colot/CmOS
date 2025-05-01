@@ -9,8 +9,10 @@
 #include "fileSystem.h"
 
 void writeTest(Ram* memory) {
-    addFile("../programs/bin/multiplication", 0x25);
-    loadFile(0x25, memory->mem, 256);
+    AddressType ID;
+    ID.value = 0x25;
+    addFile("../programs/bin/multiplication", ID);
+    loadFile(ID, memory->mem, 256);
 
     printBitmap();
     printf("\n");
@@ -18,14 +20,16 @@ void writeTest(Ram* memory) {
 }
 
 void writeEraseTest(Ram* memory) {
-    addFile("../programs/bin/multiplication", 0x25);
-    loadFile(0x25, memory->mem, 256);
+    AddressType ID;
+    ID.value = 0x25;
+    addFile("../programs/bin/multiplication", ID);
+    loadFile(ID, memory->mem, 256);
 
     printBitmap();
     printf("\n");
     printFAT();
 
-    removeFile(0x25);
+    removeFile(ID);
     printf("File removed\n");
 
     printBitmap();
@@ -35,22 +39,33 @@ void writeEraseTest(Ram* memory) {
 
 void multiPageFATTest() {
     // test is < 15 bytes -> 1 page per file
-    addFile("../programs/bin/test", 0x25);
-    addFile("../programs/bin/test", 0x26);
-    addFile("../programs/bin/test", 0x27);
-    addFile("../programs/bin/test", 0x28);
-    addFile("../programs/bin/test", 0x29);
-    addFile("../programs/bin/test", 0x2A);
-    addFile("../programs/bin/test", 0x2B);
+    AddressType ID;
+    ID.value = 0x25;
+    addFile("../programs/bin/test", ID);
+    ID.value = 0x26;
+    addFile("../programs/bin/test", ID);
+    ID.value = 0x27;
+    addFile("../programs/bin/test", ID);
+    ID.value = 0x28;
+    addFile("../programs/bin/test", ID);
+    ID.value = 0x29;
+    addFile("../programs/bin/test", ID);
+    ID.value = 0x2A;
+    addFile("../programs/bin/test", ID);
+    ID.value = 0x2B;
+    addFile("../programs/bin/test", ID);
 
     printBitmap();
     printf("\n");
     printFAT();
     printf("\n\n");
 
-    addFile("../programs/bin/test", 0x2C);
-    addFile("../programs/bin/test", 0x2D);
-    addFile("../programs/bin/test", 0x2E);
+    ID.value = 0x2C;
+    addFile("../programs/bin/test", ID);
+    ID.value = 0x2D;
+    addFile("../programs/bin/test", ID);
+    ID.value = 0x2E;
+    addFile("../programs/bin/test", ID);
 
     printBitmap();
     printf("\n");
@@ -58,15 +73,24 @@ void multiPageFATTest() {
 }
 
 void removeFATPageTest() {
-    addFile("../programs/bin/test", 0x25);
-    addFile("../programs/bin/test", 0x26);
-    addFile("../programs/bin/test", 0x27);
-    addFile("../programs/bin/test", 0x28);
-    addFile("../programs/bin/test", 0x29);
-    addFile("../programs/bin/test", 0x2A);
-    addFile("../programs/bin/test", 0x2B);
+    AddressType ID;
+    ID.value = 0x25;
+    addFile("../programs/bin/test", ID);
+    ID.value = 0x26;
+    addFile("../programs/bin/test", ID);
+    ID.value = 0x27;
+    addFile("../programs/bin/test", ID);
+    ID.value = 0x28;
+    addFile("../programs/bin/test", ID);
+    ID.value = 0x29;
+    addFile("../programs/bin/test", ID);
+    ID.value = 0x2A;
+    addFile("../programs/bin/test", ID);
+    ID.value = 0x2B;
+    addFile("../programs/bin/test", ID);
     // this will be in the second FAT page
-    addFile("../programs/bin/test", 0x2C);
+    ID.value = 0x2C;
+    addFile("../programs/bin/test", ID);
 
     printFAT();
     printf("\n\n");
@@ -74,7 +98,8 @@ void removeFATPageTest() {
     // removes the program on the last FAT page
     // removeFile(0x2C);
     // removes a program on the first FAT page
-    removeFile(0x27);
+    ID.value = 0x27;
+    removeFile(ID);
 
     printBitmap();
     printf("\n");
