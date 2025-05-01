@@ -12,8 +12,6 @@ HEADER_DIR = ../headers
 SRCS = $(wildcard $(SRC_DIR)/*.c)
 OBJS = $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(SRCS))
 
-# Add additional object files (not by default as not associated with a .c file)
-OBJS += constants.o
 
 # Output executable
 TARGET = CmOS
@@ -31,6 +29,8 @@ $(TARGET): $(OBJS)
 
 # Clean build artifacts
 clean:
+	# Add additional object files (not by default as not associated with a .c file)
+	OBJS += constants.o
 	rm -f $(OBJS) $(TARGET)
 
 .PHONY: all clean
