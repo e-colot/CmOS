@@ -84,11 +84,13 @@ void removeFATPageTest() {
 int main() {    
     
     Computer* computer = boot();
+    printf("\n\n");
 
     // writeTest(computer->memory);
     // writeEraseTest(computer->memory);
     // multiPageFATTest();
     removeFATPageTest();
+    printf("\n\n");
 
     shutdown(computer);
     return 0;

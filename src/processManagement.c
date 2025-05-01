@@ -1,10 +1,10 @@
 #include "processManagement.h"
 #include "cpu.h"
 
-PCB* creatPCB(unsigned char PID) {
+PCB* createPCB(unsigned char PID) {
     PCB* output = malloc(sizeof(PCB));
     output->PID = PID;
-    output->registers = calloc(16, 1); // calloc to have registers at '0'
+    output->registers = createReg();
     output->state = New;
     return output;
 }

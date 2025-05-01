@@ -1,5 +1,7 @@
 #pragma once
 
+#include "cpu.h"
+
 enum PCBState {
     New,
     Ready,
@@ -11,10 +13,10 @@ enum PCBState {
 typedef struct {
     enum PCBState state;
     unsigned char PID;   // process ID
-    char* registers;
+    Reg* registers;
 } PCB; // stands for process control block
 
-PCB* creatPCB(unsigned char PID);
+PCB* createPCB(unsigned char PID);
 void deletePCB(PCB* input);
 
 

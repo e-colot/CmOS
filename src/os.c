@@ -23,10 +23,10 @@ Computer* boot() {
 
 void shutdown(Computer* comp) {
     deleteMemory(comp->memory);
-    for (size_t i = 0; i < MAX_PROCESSES; i=i+sizeof(PCB*)) {
-        if (comp->processes + i) {
+    for (size_t i = 0; i < MAX_PROCESSES; i+=1){
+        if (*(comp->processes + i)){
             // if the PCB is not null (already deleted)
-            deletePCB(comp->processes + i);
+            deletePCB(*(comp->processes + i));
         }
     }
 }

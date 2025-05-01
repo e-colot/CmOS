@@ -12,7 +12,7 @@ typedef struct {
 
 // ON/OFF procedures
 Computer* boot();
-void shutdown(Computer* memory);
+void shutdown(Computer* comp);
 
 // running porgrams
 void addProcess(unsigned char PID);

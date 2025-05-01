@@ -1,10 +1,11 @@
 #include "memory.h"
+#include "constants.h"
 #include <stdio.h>
 #include <stdlib.h>
 
 Ram* createMemory() {
     Ram* memory = malloc(sizeof(Ram));
-    memory->mem = malloc(256);
+    memory->mem = malloc(RAM_SIZE);
     return memory;
 }
 
