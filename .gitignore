@@ -5,4 +5,5 @@ doc/*
 !doc/*.tex
 !doc/*.pdf
 programs/bin/*
-out/*
+.VSCodeCounter
+/out/
