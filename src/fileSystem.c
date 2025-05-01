@@ -7,16 +7,17 @@
 #include <string.h>
 
 #include "fileSystem.h"
+#include "constants.h"
 #include "disk.h"
 
 void getPage(unsigned char pos, unsigned char* buffer) {
-    // with a buffer of 16 bytes
-    diskRead(pos*16, buffer, 0, 16);
+    // with a buffer of PAGE_SIZE bytes
+    diskRead(pos*PAGE_SIZE, buffer, 0, PAGE_SIZE);
 }
 
 void setPage(unsigned char pos, unsigned char* buffer) {
-    // with a buffer of 16 bytes
-    diskWrite(pos*16, buffer, 16);
+    // with a buffer of PAGE_SIZE bytes
+    diskWrite(pos*PAGE_SIZE, buffer, PAGE_SIZE);
 }
 
 unsigned char getFreePage() {
@@ -24,11 +25,11 @@ unsigned char getFreePage() {
     // implies a variable execution time
     srand(time(NULL));
         // random seed
-    unsigned char* bitmap = malloc(32);
-    diskRead(0, bitmap, 0, 32);
+    unsigned char* bitmap = malloc(DISK_SIZE/(8*PAGE_SIZE));
+    diskRead(0, bitmap, 0, DISK_SIZE/(8*PAGE_SIZE));
 
     char full = 1;
-    for (unsigned char i = 0; i < 32; i++) {
+    for (unsigned char i = 0; i < DISK_SIZE/(8*PAGE_SIZE); i++) {
         if (bitmap[i] != (unsigned char)0xFF) {
             full = 0;
             break;
@@ -43,7 +44,7 @@ unsigned char getFreePage() {
     unsigned char page = 0;
     while(0b1 << (7-(page%8)) & bitmap[page/8]) {
         // page already used
-        page = (unsigned char)rand() % 255;
+        page = (unsigned char)rand() % ((DISK_SIZE/PAGE_SIZE)-1);
     }
     free(bitmap);
 
@@ -51,16 +52,16 @@ unsigned char getFreePage() {
 }
 
 void updateBitmap(unsigned char page) {
-    unsigned char* bitmap = malloc(32);
-    diskRead(0, bitmap, 0, 32);
+    unsigned char* bitmap = malloc(DISK_SIZE/(8*PAGE_SIZE));
+    diskRead(0, bitmap, 0, DISK_SIZE/(8*PAGE_SIZE));
     bitmap[page/8] ^= 0b1 << (7-(page%8));
     // XORing to toggle the bit
-    diskWrite(0, bitmap, 32);
+    diskWrite(0, bitmap, DISK_SIZE/(8*PAGE_SIZE));
     free(bitmap);
 }
 
 void addToFAT(unsigned char ID, unsigned char page) {
-    unsigned char* fat = malloc(16);
+    unsigned char* fat = malloc(PAGE_SIZE);
     unsigned char pageIndex;
     *(fat + 1) = 2; 
         // will be then attributed to pageIndex
@@ -70,7 +71,7 @@ void addToFAT(unsigned char ID, unsigned char page) {
         // which would indicate it was the last FAT page
         pageIndex = *(fat + 1);
         getPage(pageIndex, fat);
-        for (unsigned char i = 1; i < 8; i++) {
+        for (unsigned char i = 1; i < PAGE_SIZE/2; i++) {
             if (*(fat + i*2) == 0x00) {
                 *(fat + i*2) = ID;
                 *(fat + i*2 + 1) = page;
@@ -92,7 +93,7 @@ void addToFAT(unsigned char ID, unsigned char page) {
     fat[1] = 0x00; // last FAT page
     fat[2] = ID;
     fat[3] = page;
-    memset(fat + 4, 0, 12);
+    memset(fat + 4, 0, PAGE_SIZE - 4);
     setPage(newPageIndex, fat);
 
     free(fat);
@@ -105,16 +106,17 @@ void removeFATPage(unsigned char pageIndex) {
         // by convention, the first FAT page is at address 2 -> cannot be deleted
         return;
     }
-    unsigned char* fat = malloc(16);
+    unsigned char* fat = malloc(PAGE_SIZE);
     getPage(pageIndex, fat);
     unsigned char previousIndex = *fat;
     unsigned char nextIndex = *(fat + 1);
 
     // checks the page is empty
-    if (*(fat + 2) || *(fat + 4) || *(fat + 6) || *(fat + 8) || *(fat + 10) || *(fat + 12) || *(fat + 14)) {
-        perror("Trying to remove a non-empty FAT page");
-        free(fat);
-        return;
+    for (unsigned char i = 2; i <= PAGE_SIZE; i+=2) {
+        if (*(fat + i) != 0) {
+            free(fat);
+            return;
+        }
     }
 
     if (previousIndex) {
@@ -135,6 +137,7 @@ void removeFATPage(unsigned char pageIndex) {
 
 void reorganizeFAT(unsigned char pageIndex) {
     // It is known that the current page has a "hole" in it and it needs to be filled
+
     // There is no benefit from moving the hole to the end of the page:
     //
     //    used        used
@@ -144,17 +147,17 @@ void reorganizeFAT(unsigned char pageIndex) {
     // here above the seconde columns is not better than the first one
     // The only thing to do is to get a used line from the last FAT page to fill the hole.
     // And if this is the last FAT page, just check if it is not empty
-    unsigned char* fat = malloc(16);
+    unsigned char* fat = malloc(PAGE_SIZE);
     getPage(pageIndex, fat);
 
-    unsigned char emptySpot = 17;
-    for (unsigned char i = 1; i < 8; i++) {
+    unsigned char emptySpot = PAGE_SIZE + 1;
+    for (unsigned char i = 1; i < PAGE_SIZE/2; i++) {
         if (*(fat + 2*i) == 0) {
             emptySpot = 2*i;
             break;
         }
     }
-    if (emptySpot == 17) {
+    if (emptySpot == PAGE_SIZE + 1) {
         // no empty spot found
         perror("Called reorganizeFAT for a full page");
         return;
@@ -164,7 +167,7 @@ void reorganizeFAT(unsigned char pageIndex) {
     if (*(fat + 1)) {
         // if not last page
         unsigned char lastPage;
-        unsigned char* lastFAT = malloc(16);
+        unsigned char* lastFAT = malloc(PAGE_SIZE);
         *(lastFAT + 1) = *(fat + 1);
         while (*(lastFAT + 1)) {
             lastPage = *(lastFAT + 1);
@@ -172,7 +175,7 @@ void reorganizeFAT(unsigned char pageIndex) {
         }
         // lastFAT contains the last FAT page
         unsigned short replacement = 0;
-        for (unsigned char i = 1; i < 8; i++) {
+        for (unsigned char i = 1; i < PAGE_SIZE/2; i++) {
             if (*(lastFAT + 2*i) != 0) {
                 replacement = *((unsigned short*) (lastFAT + 2*i));
                 *(lastFAT + 2*i) = 0x00;
@@ -197,7 +200,7 @@ void reorganizeFAT(unsigned char pageIndex) {
     }
     // checks if page is empty
     char empty = 1;
-    for (unsigned char i = 1; i < 8; i++) {
+    for (unsigned char i = 1; i < PAGE_SIZE/2; i++) {
         if (*(fat + 2*i) != 0) {
             empty = 0;
             break;
@@ -212,13 +215,13 @@ void reorganizeFAT(unsigned char pageIndex) {
 unsigned char removeFromFat(unsigned char ID) {
 
     // remove the file from the FAT and return the first page address
-    unsigned char* fat = malloc(16);
+    unsigned char* fat = malloc(PAGE_SIZE);
     unsigned char pageIndex = 2;
     while (pageIndex) {
         // interpret it as "while the next FAT page is not 0",
         // which would indicate it was the last FAT page
         getPage(pageIndex, fat);
-        for (unsigned char i = 1; i < 8; i++) {
+        for (unsigned char i = 1; i < PAGE_SIZE/2; i++) {
             if (*(fat + i*2) == ID) {
                 *(fat + i*2) = 0x00;
                 unsigned char ret = *(fat + i*2 + 1);
@@ -232,19 +235,19 @@ unsigned char removeFromFat(unsigned char ID) {
     }
     free(fat);
     perror("Trying to remove a non-existing file");
-    return 255;
+    return 0;
 }
 
 unsigned char searchFAT(unsigned char ID) {
-    unsigned char* fat = malloc(16);
-    unsigned char pageIndex = 2;
-        // 2 because pages 0 and 1 are reserved for the bitmap
+    unsigned char* fat = malloc(PAGE_SIZE);
+    unsigned char pageIndex = DISK_SIZE/(8*PAGE_SIZE*PAGE_SIZE);
+        // because the first pages are reserved for the bitmap
     unsigned char page = 0;
     while (pageIndex) {
         // interpret it as "while the next FAT page is not 0",
         // which would indicate it was the last FAT page
         getPage(pageIndex, fat);
-        for (unsigned char i = 1; i < 8; i++) {
+        for (unsigned char i = 1; i < PAGE_SIZE/2; i++) {
             if (*(fat + i*2) == ID) {
                 page = *(fat + i*2 + 1);
                 free(fat);
@@ -255,7 +258,7 @@ unsigned char searchFAT(unsigned char ID) {
     }
     perror("File not found");
     free(fat);
-    return 255;
+    return 0;
 }
 
 void addFile(const char* filePath, unsigned char ID) {
@@ -270,10 +273,10 @@ void addFile(const char* filePath, unsigned char ID) {
     lseek(file, 0, SEEK_SET);
 
     // number of pages needed
-    size_t pagesNbr = fileSize/15;
+    size_t pagesNbr = fileSize/(PAGE_SIZE - 1);
         // 15 as pages are 15 bytes long with 1 byte pointing to the next page
 
-    unsigned char* buffer = malloc(16);
+    unsigned char* buffer = malloc(PAGE_SIZE);
     unsigned char page = getFreePage();
     updateBitmap(page);
     addToFAT(ID, page);
@@ -283,8 +286,8 @@ void addFile(const char* filePath, unsigned char ID) {
         unsigned char nextPage = getFreePage();
         updateBitmap(nextPage);
         buffer[0] = nextPage;
-        read(file, buffer + 1, 15);
-        diskWrite(page*16, buffer, 16);
+        read(file, buffer + 1, PAGE_SIZE - 1);
+        diskWrite(page*PAGE_SIZE, buffer, PAGE_SIZE);
         page = nextPage;
         pagesNbr--;
     }
@@ -292,8 +295,8 @@ void addFile(const char* filePath, unsigned char ID) {
     if (pagesNbr == 1) {
         nextPage = 0x00;
         buffer[0] = nextPage;
-        read(file, buffer + 1, 15);
-        diskWrite(page*16, buffer, 16);
+        read(file, buffer + 1, PAGE_SIZE - 1);
+        diskWrite(page*PAGE_SIZE, buffer, PAGE_SIZE);
     }
     free(buffer);
 }
@@ -302,13 +305,17 @@ void loadFile(unsigned char ID, unsigned char* mem, size_t len) {
     
     // Step 1: get the number of pages
     unsigned char firstPageIndex = searchFAT(ID);
+    if (firstPageIndex == 0) {
+        // file not found
+        return;
+    }
     size_t pagesNbr = getFileSize(ID);
-    if (len < pagesNbr*15) {
+    if (len < pagesNbr*(PAGE_SIZE - 1)) {
         perror("Memory too small");
     }
 
     // Step 2: load the file
-    unsigned char* pageBuffer = malloc(16);
+    unsigned char* pageBuffer = malloc(PAGE_SIZE);
     unsigned char* memPtr = mem;
     unsigned char pageIndex = firstPageIndex;
     for (unsigned char i = 0; i < pagesNbr; i++) {
@@ -316,7 +323,7 @@ void loadFile(unsigned char ID, unsigned char* mem, size_t len) {
             perror("File corrupted");
         }
         getPage(pageIndex, pageBuffer);
-        for (unsigned char j = 1; j < 16; j++) {
+        for (unsigned char j = 1; j < PAGE_SIZE; j++) {
             *(memPtr++) = pageBuffer[j];
         }
         pageIndex = pageBuffer[0];
@@ -325,7 +332,11 @@ void loadFile(unsigned char ID, unsigned char* mem, size_t len) {
 
 void removeFile(unsigned char ID) {
     unsigned char index = removeFromFat(ID);
-    unsigned char* buffer = malloc(16);
+    if (index == 0) {
+        // file not found in FAT
+        return;
+    }
+    unsigned char* buffer = malloc(PAGE_SIZE);
     do {
         getPage(index, buffer);
         updateBitmap(index);
@@ -336,12 +347,16 @@ void removeFile(unsigned char ID) {
 
 size_t getFileSize(unsigned char ID) {
     unsigned char firstPageIndex = searchFAT(ID);
+    if (firstPageIndex == 0) {
+        // file not found
+        return 0;
+    }
     unsigned char* buffer = malloc(1);
     *(buffer) = firstPageIndex;
     size_t pagesNbr = 1;
-    diskRead(*(buffer)*16, buffer, 0, 1);
+    diskRead(*(buffer)*PAGE_SIZE, buffer, 0, 1);
     while (*(buffer) != 0x00) {
-        diskRead(*(buffer)*16, buffer, 0, 1);
+        diskRead(*(buffer)*PAGE_SIZE, buffer, 0, 1);
         pagesNbr++;
     }
     free(buffer);

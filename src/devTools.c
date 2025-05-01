@@ -1,4 +1,5 @@
 #include "devTools.h"
+#include "constants.h"
 #include <stdio.h>
 
 #include "disk.h" // For diskRead
@@ -28,13 +29,13 @@ void printReg(Reg* reg) {
 }
 
 void printMem(Ram* memory) {
-    printCharList(memory->mem, 256);
+    printCharList(memory->mem, RAM_SIZE);
 }
 
 void printBitmap() {
-    unsigned char* bitmap = malloc(32);
-    diskRead(0, bitmap, 0, 32);
-    for (size_t i = 0; i < 32; i++) {
+    unsigned char* bitmap = malloc(DISK_SIZE/(8*PAGE_SIZE));
+    diskRead(0, bitmap, 0, DISK_SIZE/(8*PAGE_SIZE));
+    for (size_t i = 0; i < DISK_SIZE/(8*PAGE_SIZE); i++) {
         // in binary
         printf("%d%d%d%d%d%d%d%d  ", 
             (bitmap[i] & 0b10000000) >> 7, 
@@ -53,11 +54,14 @@ void printBitmap() {
 }
 
 void printFAT() {
-    unsigned char* fat = malloc(16);
-    unsigned char pageIndex = 2;
+    unsigned char* fat = malloc(PAGE_SIZE);
+    // page index starts after the bitmap pages
+    // the bitmap takes DISK_SIZE/(8*PAGE_SIZE)
+    // this corresponds to DISK_SIZE/(8*PAGE_SIZE*PAGE_SIZE) pages
+    unsigned char pageIndex = DISK_SIZE/(8*PAGE_SIZE*PAGE_SIZE);
     while (pageIndex) {
-        diskRead(pageIndex*16, fat, 0, 16);
-        for (size_t i = 0; i < 16; i++) {
+        diskRead(pageIndex*PAGE_SIZE, fat, 0, PAGE_SIZE);
+        for (size_t i = 0; i < PAGE_SIZE; i++) {
             printf("%02X ", fat[i]);
             if (i % 2 == 1) {
                 printf("\n");
