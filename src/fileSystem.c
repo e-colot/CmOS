@@ -25,11 +25,11 @@ unsigned char getFreePage() {
     // implies a variable execution time
     srand(time(NULL));
         // random seed
-    unsigned char* bitmap = malloc(DISK_SIZE/(8*PAGE_SIZE));
-    diskRead(0, bitmap, 0, DISK_SIZE/(8*PAGE_SIZE));
+    unsigned char* bitmap = malloc(BITMAP_SIZE);
+    diskRead(0, bitmap, 0, BITMAP_SIZE);
 
     char full = 1;
-    for (unsigned char i = 0; i < DISK_SIZE/(8*PAGE_SIZE); i++) {
+    for (unsigned char i = 0; i < BITMAP_SIZE; i++) {
         if (bitmap[i] != (unsigned char)0xFF) {
             full = 0;
             break;
@@ -52,11 +52,11 @@ unsigned char getFreePage() {
 }
 
 void updateBitmap(unsigned char page) {
-    unsigned char* bitmap = malloc(DISK_SIZE/(8*PAGE_SIZE));
-    diskRead(0, bitmap, 0, DISK_SIZE/(8*PAGE_SIZE));
+    unsigned char* bitmap = malloc(BITMAP_SIZE);
+    diskRead(0, bitmap, 0, BITMAP_SIZE);
     bitmap[page/8] ^= 0b1 << (7-(page%8));
     // XORing to toggle the bit
-    diskWrite(0, bitmap, DISK_SIZE/(8*PAGE_SIZE));
+    diskWrite(0, bitmap, BITMAP_SIZE);
     free(bitmap);
 }
 
@@ -240,7 +240,7 @@ unsigned char removeFromFat(unsigned char ID) {
 
 unsigned char searchFAT(unsigned char ID) {
     unsigned char* fat = malloc(PAGE_SIZE);
-    unsigned char pageIndex = DISK_SIZE/(8*PAGE_SIZE*PAGE_SIZE);
+    unsigned char pageIndex = BITMAP_PAGES;
         // because the first pages are reserved for the bitmap
     unsigned char page = 0;
     while (pageIndex) {

@@ -33,9 +33,9 @@ void printMem(Ram* memory) {
 }
 
 void printBitmap() {
-    unsigned char* bitmap = malloc(DISK_SIZE/(8*PAGE_SIZE));
-    diskRead(0, bitmap, 0, DISK_SIZE/(8*PAGE_SIZE));
-    for (size_t i = 0; i < DISK_SIZE/(8*PAGE_SIZE); i++) {
+    unsigned char* bitmap = malloc(BITMAP_SIZE);
+    diskRead(0, bitmap, 0, BITMAP_SIZE);
+    for (size_t i = 0; i < BITMAP_SIZE; i++) {
         // in binary
         printf("%d%d%d%d%d%d%d%d  ", 
             (bitmap[i] & 0b10000000) >> 7, 
@@ -58,7 +58,7 @@ void printFAT() {
     // page index starts after the bitmap pages
     // the bitmap takes DISK_SIZE/(8*PAGE_SIZE)
     // this corresponds to DISK_SIZE/(8*PAGE_SIZE*PAGE_SIZE) pages
-    unsigned char pageIndex = DISK_SIZE/(8*PAGE_SIZE*PAGE_SIZE);
+    unsigned char pageIndex = BITMAP_PAGES;
     while (pageIndex) {
         diskRead(pageIndex*PAGE_SIZE, fat, 0, PAGE_SIZE);
         for (size_t i = 0; i < PAGE_SIZE; i++) {
