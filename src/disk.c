@@ -23,24 +23,13 @@ void diskInit(size_t dimensions) {
     /*Clears the disk and fill it with only 0 for the length of dimensions*/
     int disk = open("disk", O_WRONLY | O_CREAT | O_TRUNC, 0644);
 
-    //Writing 1024 bytes at a time
-    unsigned char buffer[1024] = {0};
-    size_t leftDim = dimensions;    // number of bytes left
-    size_t itrDim;                  // number of bytes written at this itr
-
-    while (leftDim > 0) {
-        itrDim = (leftDim > 1024) ? 1024 : leftDim;
-        write(disk, buffer, itrDim);
-        leftDim -= itrDim;
-    }
-
     // initiate the bitmap by setting '1' on the bitmap address + 1st FAT table
     size_t bitmapSize = (BITMAP_PAGES + 1) / 8 + 1; 
     unsigned char* bitmap = calloc(bitmapSize, sizeof(unsigned char));
     size_t index = 0;
     size_t bit = 0;
     size_t bitsLeft = BITMAP_PAGES + 1;
-    while(!bitsLeft) {
+    while(bitsLeft--) {
         *(bitmap+index) = *(bitmap+index) | (0x80 >> bit);
         if (++bit == 8) {
             index += 1;
@@ -49,6 +38,17 @@ void diskInit(size_t dimensions) {
     }
     write(disk, bitmap, bitmapSize);
     free(bitmap);
+
+    //Writing 1024 '0'-bytes at a time
+    unsigned char buffer[1024] = {0};
+    size_t leftDim = dimensions - bitmapSize;    // number of bytes left
+    size_t itrDim;                  // number of bytes written at this itr
+
+    while (leftDim > 0) {
+        itrDim = (leftDim > 1024) ? 1024 : leftDim;
+        write(disk, buffer, itrDim);
+        leftDim -= itrDim;
+    }
 
     close(disk);
 }

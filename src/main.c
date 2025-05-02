@@ -12,6 +12,7 @@ void writeTest(Ram* memory) {
     AddressType ID;
     ID.value = 0x25;
     addFile("../programs/bin/multiplication", ID);
+
     loadFile(ID, memory->mem, 256);
 
     printBitmap();
@@ -111,10 +112,10 @@ int main() {
     Computer* computer = boot();
     printf("\n\n");
 
-    // writeTest(computer->memory);
+    writeTest(computer->memory);
     // writeEraseTest(computer->memory);
     // multiPageFATTest();
-    removeFATPageTest();
+    // removeFATPageTest();
     printf("\n\n");
 
     shutdown(computer);

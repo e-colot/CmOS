@@ -7,9 +7,9 @@ typedef union {
     unsigned int value;  // must be large enough to fit ADDRESSING_BYTES
 } AddressType;
 
-void copyToAddress(unsigned char* src, AddressType* dest);
-void copyFromAddress(AddressType* src, unsigned char* dest);
-unsigned char checkAddress(void* src, size_t value);
+AddressType getAddress(unsigned char* src);
+void setAddress(unsigned char* dest, AddressType src);
+unsigned char checkAddress(unsigned char* src, size_t value);
 
 
 size_t getFileSize(AddressType ID);

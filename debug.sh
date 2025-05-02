@@ -8,14 +8,14 @@ cd bin
 make clean
 make
 
-# Start gdb with the compiled binary
-gdb -q ./CmOS <<EOF
-# Chose the line at which to break
+clear
 
-break os.c:19
+# Start gdb with the compiled binary
+gdb -q ./CmOS
+
+# Chose the line at which to break
+# break fileSystem.c:94
 
 # Run the program
-run
+# run
 
-
-EOF
