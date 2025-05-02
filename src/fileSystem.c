@@ -23,17 +23,12 @@ void copyFromAddress(AddressType* src, unsigned char* dest) {
         *(dest + i) = src->bytes[i];
     }
 }
-unsigned char checkAddress(unsigned char* src, size_t value) {
+unsigned char checkAddress(void* src, size_t value) {
     // checks if the address is equal to value
     // returns 1 if they are the same, 0 otherwise
-    AddressType toCompare;
-    toCompare.value = value;
-    for (unsigned char i = 0; i < ADDRESSING_BYTES; i++) {
-        if (*(src + i) != toCompare.bytes[i]) {
-            return 0;
-        }
-    }
-    return 1;
+    AddressType srcAddress;
+    copyToAddress((unsigned char*)src, &srcAddress);
+    return srcAddress.value == value;
 }
 // --------------- END ADRESSING OPERATIONS --------------
 
@@ -67,7 +62,9 @@ AddressType getFreePage() {
     if (full) {
         free(bitmap);
         perror("Disk full");
-        return;
+        AddressType zero;
+        zero.value = 0;
+        return zero;
     }
 
     AddressType page;
@@ -105,7 +102,7 @@ void addToFAT(AddressType ID, AddressType page) {
         getPage(pageIndex, fat);
 
         for (size_t i = 1; i < PAGE_SIZE/(2*ADDRESSING_BYTES); i++) {
-            if (checkAddress(fat + i*ADDRESSING_BYTES, 0)) {
+            if (checkAddress((void*)(fat + i*ADDRESSING_BYTES), 0)) {
                 // if the entry is empty
                 copyFromAddress(&ID, fat + i*ADDRESSING_BYTES);
                 copyFromAddress(&page, fat + i*ADDRESSING_BYTES + ADDRESSING_BYTES);
@@ -142,7 +139,7 @@ void removeFATPage(AddressType pageIndex) {
     // a bit overkill as it could handle a page in the middle being deleted even though it will
     // only be called in the case of the last FAT page being deleted (if implemented as planned)
     // it still will not remove the first FAT page (located at pageIndex = 2)
-    if (checkAddress(&pageIndex, FAT_START)) {
+    if (checkAddress((void*)(&pageIndex), FAT_START)) {
         // by convention, the first FAT page is at address FAT_START -> cannot be deleted
         return;
     }
@@ -154,20 +151,20 @@ void removeFATPage(AddressType pageIndex) {
 
     // checks the page is empty
     for (size_t i = 1; i <= PAGE_SIZE/(2*ADDRESSING_BYTES); i++) {
-        if (!checkAddress(fat + i*ADDRESSING_BYTES, 0)) {
+        if (!checkAddress((void*)(fat + i*ADDRESSING_BYTES), 0)) {
             // the i-th entry is not empty
             free(fat);
             return;
         }
     }
 
-    if (checkAddress(&previousIndex, 0)) {
+    if (checkAddress((void*)(&previousIndex), 0)) {
         // if it was not the first FAT page
         getPage(previousIndex, fat);
         copyFromAddress(&nextIndex, fat + ADDRESSING_BYTES);
         setPage(previousIndex, fat);
     }
-    if (checkAddress(&nextIndex, 0)) {
+    if (checkAddress((void*)(&nextIndex), 0)) {
         // if it was not the last FAT page
         getPage(nextIndex, fat);
         copyFromAddress(&previousIndex, fat);
@@ -195,7 +192,7 @@ void reorganizeFAT(AddressType pageIndex) {
     unsigned char emptySpot = PAGE_SIZE + 1;
     // REMARK: emptySpot takes into account ADDRESSING_BYTES, DO NOT multiply it further
     for (size_t i = 1; i < PAGE_SIZE/(2*ADDRESSING_BYTES); i++) {
-        if (checkAddress(fat + i*ADDRESSING_BYTES, 0)) {
+        if (checkAddress((void*)(fat + i*ADDRESSING_BYTES), 0)) {
             emptySpot = ADDRESSING_BYTES*i;
             break;
         }
@@ -207,12 +204,12 @@ void reorganizeFAT(AddressType pageIndex) {
     }
 
 
-    if (checkAddress(fat + emptySpot, 0)) {
+    if (checkAddress((void*)(fat + emptySpot), 0)) {
         // if not last page
         AddressType lastPage;
         unsigned char* lastFAT = malloc(PAGE_SIZE);
         *(lastFAT + 1) = *(fat + 1);
-        while (checkAddress(lastFAT + ADDRESSING_BYTES, 0)) {
+        while (checkAddress((void*)(lastFAT + ADDRESSING_BYTES), 0)) {
             copyToAddress(lastFAT + ADDRESSING_BYTES, &lastPage);
             getPage(lastPage, lastFAT);
         }
@@ -221,7 +218,7 @@ void reorganizeFAT(AddressType pageIndex) {
         tmpID.value = 0;
         tmpPage.value = 0;
         for (unsigned char i = 1; i < PAGE_SIZE/(2*ADDRESSING_BYTES); i++) {
-            if (!checkAddress(lastFAT + i*ADDRESSING_BYTES, 0)) {
+            if (!checkAddress((void*)(lastFAT + i*ADDRESSING_BYTES), 0)) {
                 // the i-th entry is not empty
                 copyToAddress(lastFAT + i*ADDRESSING_BYTES, &tmpID);
                 copyToAddress(lastFAT + i*ADDRESSING_BYTES + ADDRESSING_BYTES, &tmpPage);
@@ -254,7 +251,7 @@ void reorganizeFAT(AddressType pageIndex) {
     // checks if page is empty
     char empty = 1;
     for (size_t i = 1; i < PAGE_SIZE/(2*ADDRESSING_BYTES); i++) {
-        if (!checkAddress(fat + i*ADDRESSING_BYTES, 0)) {
+        if (!checkAddress((void*)(fat + i*ADDRESSING_BYTES), 0)) {
             // the i-th entry is not empty
             empty = 0;
             break;
@@ -277,7 +274,7 @@ AddressType removeFromFat(AddressType ID) {
         // which would indicate it was the last FAT page
         getPage(pageIndex, fat);
         for (size_t i = 1; i < PAGE_SIZE/(2*ADDRESSING_BYTES); i++) {
-            if (checkAddress(fat + i*ADDRESSING_BYTES, ID.value)) {
+            if (checkAddress((void*)(fat + i*ADDRESSING_BYTES), ID.value)) {
                 // the i-th entry corresponds to the ID to be removed
                 AddressType zero;
                 zero.value = 0x00;
@@ -313,7 +310,7 @@ AddressType searchFAT(AddressType ID) {
         // which would indicate it was the last FAT page
         getPage(pageIndex, fat);
         for (size_t i = 1; i < PAGE_SIZE/(2*ADDRESSING_BYTES); i++) {
-            if (checkAddress(fat + i*ADDRESSING_BYTES, ID.value)) {
+            if (checkAddress((void*)(fat + i*ADDRESSING_BYTES), ID.value)) {
                 // the i-th entry corresponds to the ID to be found
                 copyToAddress(fat + i*ADDRESSING_BYTES, &page);
                 free(fat);
@@ -326,6 +323,23 @@ AddressType searchFAT(AddressType ID) {
     free(fat);
     page.value = 0;
     return page;
+}
+
+size_t getFileSize(AddressType ID) {
+    AddressType pageIndex = searchFAT(ID);
+    if (pageIndex.value == 0) {
+        // file not found
+        return 0;
+    }
+
+    size_t pagesNbr = 1;
+
+    diskRead(pageIndex.value*PAGE_SIZE, (unsigned char*)&pageIndex, 0, ADDRESSING_BYTES);
+    while (pageIndex.value != 0x00) {
+        diskRead(pageIndex.value*PAGE_SIZE, (unsigned char*)&pageIndex, 0, ADDRESSING_BYTES);
+        pagesNbr++;
+    }
+    return pagesNbr;
 }
 
 void addFile(const char* filePath, AddressType ID) {
@@ -411,22 +425,5 @@ void removeFile(AddressType ID) {
         copyToAddress(buffer, &index);
     }
     while(*buffer != 0x00);
-}
-
-size_t getFileSize(AddressType ID) {
-    AddressType pageIndex = searchFAT(ID);
-    if (pageIndex.value == 0) {
-        // file not found
-        return 0;
-    }
-
-    size_t pagesNbr = 1;
-
-    diskRead(pageIndex.value*PAGE_SIZE, (unsigned char*)&pageIndex, 0, ADDRESSING_BYTES);
-    while (pageIndex.value != 0x00) {
-        diskRead(pageIndex.value*PAGE_SIZE, (unsigned char*)&pageIndex, 0, ADDRESSING_BYTES);
-        pagesNbr++;
-    }
-    return pagesNbr;
 }
 

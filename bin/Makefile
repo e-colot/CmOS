@@ -29,8 +29,6 @@ $(TARGET): $(OBJS)
 
 # Clean build artifacts
 clean:
-	# Add additional object files (not by default as not associated with a .c file)
-	OBJS += constants.o
 	rm -f $(OBJS) $(TARGET)
 
 .PHONY: all clean
