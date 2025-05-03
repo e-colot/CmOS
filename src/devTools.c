@@ -1,5 +1,6 @@
 #include "devTools.h"
 #include "constants.h"
+#include "fileSystem.h"
 #include <stdio.h>
 
 #include "disk.h" // For diskRead
@@ -58,17 +59,25 @@ void printFAT() {
     // page index starts after the bitmap pages
     // the bitmap takes DISK_SIZE/(8*PAGE_SIZE)
     // this corresponds to DISK_SIZE/(8*PAGE_SIZE*PAGE_SIZE) pages
-    unsigned char pageIndex = BITMAP_PAGES;
-    while (pageIndex) {
-        diskRead(pageIndex*PAGE_SIZE, fat, 0, PAGE_SIZE);
+    AddressType pageIndex;
+    pageIndex.value = BITMAP_PAGES;
+    while (pageIndex.value) {
+        // interpret it as "while the next FAT page is not in 0"
+        diskRead(pageIndex.value*PAGE_SIZE, fat, 0, PAGE_SIZE);
         for (size_t i = 0; i < PAGE_SIZE; i++) {
-            printf("%02X ", fat[i]);
-            if (i % 2 == 1) {
+            printf("%02X", fat[i]);
+            if (i % ADDRESSING_BYTES == ADDRESSING_BYTES - 1) {
+                printf(" ");
+            }
+            if (i % (2*ADDRESSING_BYTES) == 2*ADDRESSING_BYTES - 1) {
                 printf("\n");
             }
         }
-        printf("End of FAT page\n");
-        pageIndex = fat[1];
+        if (PAGE_SIZE % (2*ADDRESSING_BYTES) != 0) {
+            printf("\n");
+        }
+        printf("End of FAT page located at 0x%x\n", pageIndex.value);
+        pageIndex = getAddress(fat + ADDRESSING_BYTES);
     }
     free(fat);
     printf("End of FAT\n\n");

@@ -64,7 +64,9 @@ unsigned char writeTest(size_t fileNbr, size_t fileSize) {
     adjustedFileSize *= (PAGE_SIZE);
     // load a random copy of the file
     unsigned char* buffer = malloc(adjustedFileSize);
-    if (loadFile(IDs[rand() % fileNbr], buffer, adjustedFileSize)) {
+    AddressType randomID;
+    randomID = IDs[rand() % fileNbr];
+    if (loadFile(randomID, buffer, adjustedFileSize)) {
         printf("Error loading file\n");
         free(buffer);
         free(fileContent);

@@ -10,6 +10,10 @@
 #include "constants.h"
 #include "disk.h"
 
+//DEBUG
+#include "devTools.h"
+
+
 // --------------- ADRESSING OPERATIONS ----------------
 AddressType getAddress(unsigned char* src) {
     // returns the address from src
@@ -100,9 +104,14 @@ void addToFAT(AddressType ID, AddressType page) {
     // adds the entry [ID, page] to the FAT
     unsigned char* fat = malloc(PAGE_SIZE);
     AddressType pageIndex;
-    *(fat + ADDRESSING_BYTES) = FAT_START; 
-        // set as next fat page address of the first FAT page
-    while (*(fat + ADDRESSING_BYTES)) {
+
+    // because of the loop, fat behvaves as the previous FAT page
+    // This means it needs to have as second address a pointer to the next FAT page
+    pageIndex.value = FAT_START;
+    setAddress(fat + ADDRESSING_BYTES, pageIndex);
+
+
+    while (getAddress(fat + ADDRESSING_BYTES).value) {
         // interpret it as "while the next FAT page is not 0", 
         // which would indicate it was the last FAT page
 
@@ -110,7 +119,7 @@ void addToFAT(AddressType ID, AddressType page) {
         pageIndex = getAddress(fat + ADDRESSING_BYTES);
         getPage(pageIndex, fat);
 
-        for (size_t i = 2; i < PAGE_SIZE/ADDRESSING_BYTES; i=i+2) {
+        for (size_t i = 2; (i+2)*ADDRESSING_BYTES <= PAGE_SIZE; i=i+2) {
             if (checkAddress(fat + i*ADDRESSING_BYTES, 0)) {
                 // if the entry is empty, put the ID and page in it
                 setAddress(fat + i*ADDRESSING_BYTES, ID);
@@ -139,7 +148,7 @@ void addToFAT(AddressType ID, AddressType page) {
     setAddress(fat + 3*ADDRESSING_BYTES, page);
 
     // set the rest of the page to 0
-    memset(fat + 4, 0, PAGE_SIZE - 4);
+    memset(fat + 4*ADDRESSING_BYTES, 0, PAGE_SIZE - 4*ADDRESSING_BYTES);
     setPage(newPageIndex, fat);
 
     free(fat);
@@ -161,7 +170,7 @@ void removeFATPage(AddressType pageIndex) {
     AddressType nextIndex = getAddress(fat + ADDRESSING_BYTES);
 
     // checks the page is empty
-    for (size_t i = 2; i <= PAGE_SIZE/ADDRESSING_BYTES; i=i+2) {
+    for (size_t i = 2; (i+2)*ADDRESSING_BYTES <= PAGE_SIZE; i=i+2) {
         if (!checkAddress((fat + i*ADDRESSING_BYTES), 0)) {
             // the i-th entry is not empty
             free(fat);
@@ -201,12 +210,13 @@ void reorganizeFAT(AddressType pageIndex) {
     // here above the second columns is not better than the first one
     // The only thing to do is to get a used line from the last FAT page to fill the hole.
     // And if this is the last FAT page, just check if it is not empty
+
     unsigned char* fat = malloc(PAGE_SIZE);
     getPage(pageIndex, fat);
 
     unsigned char emptySpot = PAGE_SIZE + 1;
     // REMARK: emptySpot takes into account ADDRESSING_BYTES, DO NOT multiply it further
-    for (size_t i = 2; i < PAGE_SIZE/ADDRESSING_BYTES; i=i+2) {
+    for (size_t i = 2; (i+2)*ADDRESSING_BYTES <= PAGE_SIZE; i=i+2) {
         if (checkAddress((fat + i*ADDRESSING_BYTES), 0)) {
             // the i-th entry is empty
             emptySpot = ADDRESSING_BYTES*i;
@@ -221,58 +231,65 @@ void reorganizeFAT(AddressType pageIndex) {
         return;
     }
 
-
-    if (checkAddress((fat + emptySpot), 0)) {
-        // if not last page
-        AddressType lastPage;
-        unsigned char* lastFAT = malloc(PAGE_SIZE);
-        *(lastFAT + 1) = *(fat + 1);
-        while (checkAddress((lastFAT + ADDRESSING_BYTES), 0)) {
-            lastPage = getAddress(lastFAT + ADDRESSING_BYTES);
-            getPage(lastPage, lastFAT);
-        }
-        // lastFAT contains the last FAT page
-        AddressType tmpID, tmpPage;
-        tmpID.value = 0;
-        tmpPage.value = 0;
-        for (unsigned char i = 2; i < PAGE_SIZE/ADDRESSING_BYTES; i=i+2) {
-            if (!checkAddress((lastFAT + i*ADDRESSING_BYTES), 0)) {
-                // the i-th entry is not empty
-                // copy the ID and page to be moved
-                tmpID = getAddress(lastFAT + i*ADDRESSING_BYTES);
-                tmpPage = getAddress(lastFAT + i*ADDRESSING_BYTES + ADDRESSING_BYTES);
-
-                // remove the entry from the last FAT page
-                AddressType zero;
-                zero.value = 0;
-                setAddress(lastFAT + i*ADDRESSING_BYTES, zero);
-
-                setPage(lastPage, lastFAT);
-                break;
-            }
-        }
-        if (tmpPage.value == 0) {
-            // should never happens, would mean that the last page was already empty
-            printf("Last FAT page was already empty and was still linked\n");
-            free(lastFAT);
-            free(fat);
-            return;
-        }
-        // still have to put "tmpID" and "tmpPage" in "emptySpot"
-        // and check if lastFAT is empty now
-        setAddress(fat + emptySpot, tmpID);
-        setAddress(fat + emptySpot + ADDRESSING_BYTES, tmpPage);
-        // write back the modified FAT page in disk
-        setPage(pageIndex, fat);
-        // lastFAT will not be freed, it will replace fat and then it will follow with the case
-        // of fat being the last FAT page
+    // get the last FAT page
+    AddressType lastPage;
+    unsigned char* lastFAT = malloc(PAGE_SIZE);
+    // load in lastFAT the FAT page in which there is a hole
+    getPage(pageIndex, lastFAT);
+    if (checkAddress((lastFAT + ADDRESSING_BYTES), 0)) {
+        // the hole is in the last FAT page
+        // no need to reorganize it
+        free(lastFAT);
         free(fat);
-        fat = lastFAT;
-        pageIndex = lastPage;
+        return;
     }
+    while (!checkAddress((lastFAT + ADDRESSING_BYTES), 0)) {
+        // the next FAT page is not the last one
+        lastPage = getAddress(lastFAT + ADDRESSING_BYTES);
+        getPage(lastPage, lastFAT);
+    }
+    // lastFAT contains the last FAT page
+    AddressType tmpID, tmpPage;
+    tmpID.value = 0;
+    tmpPage.value = 0;
+    for (size_t i = 2; (i+2)*ADDRESSING_BYTES <= PAGE_SIZE; i=i+2) {
+        if (!checkAddress((lastFAT + i*ADDRESSING_BYTES), 0)) {
+            // the i-th entry is not empty
+            // copy the ID and page to be moved
+            tmpID = getAddress(lastFAT + i*ADDRESSING_BYTES);
+            tmpPage = getAddress(lastFAT + i*ADDRESSING_BYTES + ADDRESSING_BYTES);
+
+            // remove the entry from the last FAT page
+            AddressType zero;
+            zero.value = 0;
+            setAddress(lastFAT + i*ADDRESSING_BYTES, zero);
+
+            setPage(lastPage, lastFAT);
+            break;
+        }
+    }
+    if (tmpPage.value == 0) {
+        // should never happens, would mean that the last page was already empty
+        printf("Last FAT page was already empty and was still linked\n");
+        free(lastFAT);
+        free(fat);
+        return;
+    }
+    // still have to put "tmpID" and "tmpPage" in "emptySpot"
+    // and check if lastFAT is empty now
+    setAddress(fat + emptySpot, tmpID);
+    setAddress(fat + emptySpot + ADDRESSING_BYTES, tmpPage);
+    // write back the modified FAT page in disk
+    setPage(pageIndex, fat);
+    // lastFAT will not be freed, it will replace fat and then it will follow with the case
+    // of fat being the last FAT page
+    free(fat);
+    fat = lastFAT;
+    pageIndex = lastPage;
+    
     // checks if page is empty
     char empty = 1;
-    for (size_t i = 2; i < PAGE_SIZE/ADDRESSING_BYTES; i=i+2) {
+    for (size_t i = 2; (i+2)*ADDRESSING_BYTES <= PAGE_SIZE; i=i+2) {
         if (!checkAddress((fat + i*ADDRESSING_BYTES), 0)) {
             // the i-th entry is not empty
             empty = 0;
@@ -282,7 +299,7 @@ void reorganizeFAT(AddressType pageIndex) {
     if (empty) {
         removeFATPage(pageIndex);
     }
-    free(fat);
+    free(fat);    
 }
 
 AddressType removeFromFat(AddressType ID) {
@@ -295,7 +312,7 @@ AddressType removeFromFat(AddressType ID) {
         // interpret it as "while the next FAT page is not 0",
         // which would indicate it was the last FAT page
         getPage(pageIndex, fat);
-        for (size_t i = 2; i < PAGE_SIZE/ADDRESSING_BYTES; i=i+2) {
+        for (size_t i = 2; (i+2)*ADDRESSING_BYTES <= PAGE_SIZE; i=i+2) {
             if (checkAddress((fat + i*ADDRESSING_BYTES), ID.value)) {
                 // the i-th entry corresponds to the ID to be removed
                 AddressType zero;
@@ -332,7 +349,7 @@ AddressType searchFAT(AddressType ID) {
         // interpret it as "while the next FAT page is not 0",
         // which would indicate it was the last FAT page
         getPage(pageIndex, fat);
-        for (size_t i = 2; i < PAGE_SIZE/ADDRESSING_BYTES; i=i+2) {
+        for (size_t i = 2; (i+2)*ADDRESSING_BYTES <= PAGE_SIZE; i=i+2) {
             if (checkAddress((fat + i*ADDRESSING_BYTES), ID.value)) {
                 // the i-th entry corresponds to the ID to be found
                 // copy the page address to be returned
@@ -445,35 +462,30 @@ size_t addFile(const char* filePath, AddressType ID) {
     return 0;
 }
 
-size_t loadFile(AddressType ID, unsigned char* mem, size_t len) {
+size_t loadFile(AddressType ID, unsigned char* dest, size_t len) {
     
     // Step 1: get the number of pages
     AddressType firstPageIndex = searchFAT(ID);
     if (firstPageIndex.value == 0) {
         // file not found
+        printf("File not found\n");
         return 1;
     }
     size_t pagesNbr = getFileSize(ID);
 
-    if (len < pagesNbr*(PAGE_SIZE - 1)) {
+    if (len < pagesNbr*(PAGE_SIZE - ADDRESSING_BYTES)) {
         printf("Memory allocated to loadFile too small\n");
         return 1;
     }
 
     // Step 2: load the file
     unsigned char* pageBuffer = malloc(PAGE_SIZE);
-    unsigned char* memPtr = mem;
+    unsigned char* destPtr = dest;
     AddressType pageIndex = firstPageIndex;
     for (size_t i = 0; i < pagesNbr; i++) {
-        if (pageIndex.value == 0x00) {
-            // impossible to find the next page
-            printf("File corrupted\n");
-            free(pageBuffer);
-            return 1;
-        }
         getPage(pageIndex, pageBuffer);
-        for (unsigned char j = 1; j < PAGE_SIZE; j++) {
-            *(memPtr++) = pageBuffer[j];
+        for (unsigned char j = ADDRESSING_BYTES; j < PAGE_SIZE; j++) {
+            *(destPtr++) = pageBuffer[j];
         }
         pageIndex = getAddress(pageBuffer);
     }

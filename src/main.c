@@ -100,22 +100,17 @@ void removeFATPageTest() {
 int main() {    
     
     Computer* computer = boot();
-    printf("\n\n");
+    printf("Computer booted\n");
 
-    unsigned char res = writeTest(27, 132);
+    unsigned char res = writeTest(5, 250);
     if (res) {
         printf("Error in writeTest\n");
     }
     else {
         printf("writeTest passed\n");
     }
-    // writeEraseTest(computer->memory);
-    // multiPageFATTest();
-    // removeFATPageTest();
-    printf("\n\n");
 
-    printf("Bitmap:\n");
-    printBitmap();
+    //DEBUG
     printf("FAT:\n");
     printFAT();
 
