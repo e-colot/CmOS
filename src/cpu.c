@@ -195,7 +195,7 @@ int runCode(Reg* reg, Ram* memory) {
     case 0xFF: // HLT
         return 0; // Stop the CPU
     default:
-        perror("Unknown opcode");
+        printf("Unknown opcode\n");
         return 0; 
     }
     *(reg->RI) += 3; // Move to the next instruction

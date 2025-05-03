@@ -4,21 +4,11 @@
 
 #include "devTools.h"
 #include "os.h"
+#include "tests.h"
 
 // should disappear later
 #include "fileSystem.h"
 
-void writeTest(Ram* memory) {
-    AddressType ID;
-    ID.value = 0x25;
-    addFile("../programs/bin/multiplication", ID);
-
-    loadFile(ID, memory->mem, 256);
-
-    printBitmap();
-    printf("\n");
-    printFAT();
-}
 
 void writeEraseTest(Ram* memory) {
     AddressType ID;
@@ -112,11 +102,22 @@ int main() {
     Computer* computer = boot();
     printf("\n\n");
 
-    writeTest(computer->memory);
+    unsigned char res = writeTest(27, 132);
+    if (res) {
+        printf("Error in writeTest\n");
+    }
+    else {
+        printf("writeTest passed\n");
+    }
     // writeEraseTest(computer->memory);
     // multiPageFATTest();
     // removeFATPageTest();
     printf("\n\n");
+
+    printf("Bitmap:\n");
+    printBitmap();
+    printf("FAT:\n");
+    printFAT();
 
     shutdown(computer);
     return 0;

@@ -13,7 +13,7 @@ unsigned char checkAddress(unsigned char* src, size_t value);
 
 
 size_t getFileSize(AddressType ID);
-void addFile(const char* filePath, AddressType ID);
-void loadFile(AddressType ID, unsigned char* mem, size_t len);
+size_t addFile(const char* filePath, AddressType ID);
+size_t loadFile(AddressType ID, unsigned char* mem, size_t len);
 void removeFile(AddressType ID);
 

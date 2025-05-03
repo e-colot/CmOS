@@ -67,7 +67,7 @@ void printFAT() {
                 printf("\n");
             }
         }
-        printf("\nEnd of FAT page\n");
+        printf("End of FAT page\n");
         pageIndex = fat[1];
     }
     free(fat);
