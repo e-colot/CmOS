@@ -84,12 +84,12 @@ int main() {
     Computer* computer = boot();
     printf("Computer booted\n");
 
-    unsigned char res = eraseTest(20, 250);
+    unsigned char res = fatFillingTest(20, 250);
     if (res) {
-        printf("Error in eraseTest\n");
+        printf("Error in fatFillingTest\n");
     }
     else {
-        printf("eraseTest suceeded\n");
+        printf("fatFillingTest suceeded\n");
     }
 
     //DEBUG

@@ -22,6 +22,7 @@ unsigned char writeTest(size_t fileNbr, size_t fileSize) {
     FILE *file = fopen("../programs/bin/randomFile", "wb");
     if (!file) {
         printf("Failed to create file\n");
+        free(fileContent);
         return 1;
     }
     for (size_t i = 0; i < fileSize; i++) {
@@ -52,6 +53,7 @@ unsigned char writeTest(size_t fileNbr, size_t fileSize) {
         if(addFile("../programs/bin/randomFile", IDs[i])) {
             printf("Error adding file\n");
             free(fileContent);
+            free(IDs);
             return 1;
         }
     }
@@ -71,6 +73,7 @@ unsigned char writeTest(size_t fileNbr, size_t fileSize) {
         printf("Error loading file\n");
         free(buffer);
         free(fileContent);
+        free(IDs);
         return 1;
     }
     // check whether the file was correctly added
@@ -82,6 +85,7 @@ unsigned char writeTest(size_t fileNbr, size_t fileSize) {
     }
     free(buffer);
     free(fileContent);
+    free(IDs);
     if (error) {
         printf("File not correctly written/read\n");
         return 1;
@@ -98,7 +102,6 @@ unsigned char eraseTest(size_t fileNbr, size_t fileSize) {
     }
 
     // file creation
-    unsigned char* fileContent = malloc(fileSize);
     FILE *file = fopen("../programs/bin/randomFile", "wb");
     if (!file) {
         printf("Failed to create file\n");
@@ -106,10 +109,8 @@ unsigned char eraseTest(size_t fileNbr, size_t fileSize) {
     }
     for (size_t i = 0; i < fileSize; i++) {
         unsigned char randomByte = rand() % 0xFF;
-        fileContent[i] = randomByte;
         fwrite(&randomByte, sizeof(unsigned char), 1, file);
     }
-    free(fileContent);
     fclose(file);
 
     // creation of the ID's of 2*fileNbr files
@@ -133,6 +134,7 @@ unsigned char eraseTest(size_t fileNbr, size_t fileSize) {
     for (size_t i = 0; i < 2*fileNbr; i++) {
         if(addFile("../programs/bin/randomFile", IDs[i])) {
             printf("Error adding file\n");
+            free(IDs);
             return 1;
         }
     }
@@ -146,6 +148,7 @@ unsigned char eraseTest(size_t fileNbr, size_t fileSize) {
 
         if (removeFile(IDs[randomIndex])) {
             printf("Error removing file\n");
+            free(IDs);
             return 1;
         }
 
@@ -167,6 +170,7 @@ unsigned char eraseTest(size_t fileNbr, size_t fileSize) {
             if (ID.value == IDs[randomIndex].value) {
                 printf("File not removed from FAT\n");
                 free(fat);
+                free(IDs);
                 return 1;
             }
             // load next FAT page address
@@ -181,6 +185,88 @@ unsigned char eraseTest(size_t fileNbr, size_t fileSize) {
     return 0;
 }
     
+unsigned char fatFillingTest(size_t fileNbr, size_t fileSize) {
+    // randomness initialization
+    static int seedInitialized = 0;
+    if (!seedInitialized) {
+        srand(time(NULL));
+        seedInitialized = 1;
+    }
 
+    // file creation
+    FILE *file = fopen("../programs/bin/randomFile", "wb");
+    if (!file) {
+        printf("Failed to create file\n");
+        return 1;
+    }
+    for (size_t i = 0; i < fileSize; i++) {
+        unsigned char randomByte = rand() % 0xFF;
+        fwrite(&randomByte, sizeof(unsigned char), 1, file);
+    }
+    fclose(file);
+
+    // creation of the ID's
+    AddressType* IDs = malloc(fileNbr * sizeof(AddressType));
+    for (size_t i = 0; i < fileNbr; i++) {
+        IDs[i].value = rand() % 0xFFFFFFFF;
+        // set to 0 the bytes that are not used for addressing
+        for (size_t j = 3; j >= ADDRESSING_BYTES; j--) {
+            IDs[i].bytes[j] = 0;
+        }
+        // check that the ID is not already used
+        for (size_t j = 0; j < i; j++) {
+            if (IDs[i].value == IDs[j].value) {
+                i--;
+                break;
+            }
+        }
+    }
+
+    // file addition
+    for (size_t i = 0; i < fileNbr; i++) {
+        if(addFile("../programs/bin/randomFile", IDs[i])) {
+            printf("Error adding file\n");
+            free(IDs);
+            return 1;
+        }
+    }
+
+    // check if each element of IDs is in the FAT
+    unsigned char* fat = malloc(PAGE_SIZE);
+    AddressType pageIndex;
+    pageIndex.value = FAT_START;
+    while (pageIndex.value) {
+        // interpret it as "while the next FAT page is not in 0"
+        diskRead(pageIndex.value*PAGE_SIZE, fat, 0, PAGE_SIZE);
+        AddressType ID;
+        ID.value = 0;
+        for (size_t i = 2; (i+2)*ADDRESSING_BYTES <= PAGE_SIZE; i=i+2) {
+            for (unsigned char j = 0; j < ADDRESSING_BYTES; j++) {
+                ID.bytes[j] = *(fat + i*ADDRESSING_BYTES + j);
+            }
+            // check if the ID is in the IDs array
+            for (size_t j = 0; j < fileNbr; j++) {
+                if (ID.value == IDs[j].value) {
+                    IDs[j].value = 0; // Mark as used
+                    break;
+                }
+            }
+        }
+        // load next FAT page address
+        pageIndex = getAddress(fat + ADDRESSING_BYTES);
+    }
+    // check if all IDs were found
+    for (size_t i = 0; i < fileNbr; i++) {
+        if (IDs[i].value != 0) {
+            printf("File not found in FAT\n");
+            free(fat);
+            free(IDs);
+            return 1;
+        }
+    }
+    free(fat);
+    free(IDs);
+    return 0;
+}
 
 
