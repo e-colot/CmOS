@@ -324,7 +324,7 @@ AddressType removeFromFat(AddressType ID) {
 
                 setPage(pageIndex, fat);
                 free(fat);
-                reorganizeFAT(pageIndex); // will remove the FAT page if it is empty
+                //reorganizeFAT(pageIndex); // will remove the FAT page if it is empty
                 return ret;
             }
         }
@@ -493,11 +493,11 @@ size_t loadFile(AddressType ID, unsigned char* dest, size_t len) {
     return 0;
 }
 
-void removeFile(AddressType ID) {
+size_t removeFile(AddressType ID) {
     AddressType index = removeFromFat(ID);
     if (index.value == 0) {
         // file not found in FAT
-        return;
+        return 1;
     }
     unsigned char* buffer = malloc(PAGE_SIZE);
     do {
@@ -507,5 +507,6 @@ void removeFile(AddressType ID) {
     }
     while(*buffer != 0x00);
     free(buffer);
+    return 0;
 }
 

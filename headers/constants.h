@@ -1,8 +1,8 @@
 #pragma once
 
 #define RAM_SIZE 256
-#define DISK_SIZE (512 * 1024 * 1024)
-#define PAGE_SIZE 16 // 16 bytes per page
+#define DISK_SIZE (512 * 1024)
+#define PAGE_SIZE 64
 #define MAX_PROCESSES 16
 
 #define BITMAP_SIZE (DISK_SIZE/(8*PAGE_SIZE))  // number of bytes in the bitmap

@@ -6,11 +6,6 @@
 
 ## 2. Test scenarios
 
-### 2.1. Erasing files
-    
-    - make sure file is removed from FAT
-    - check whether FAT is reorganized
-
 ### 2.2. FAT filling
 
     - make sure every file is in FAT

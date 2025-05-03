@@ -10,24 +10,6 @@
 #include "fileSystem.h"
 
 
-void writeEraseTest(Ram* memory) {
-    AddressType ID;
-    ID.value = 0x25;
-    addFile("../programs/bin/multiplication", ID);
-    loadFile(ID, memory->mem, 256);
-
-    printBitmap();
-    printf("\n");
-    printFAT();
-
-    removeFile(ID);
-    printf("File removed\n");
-
-    printBitmap();
-    printf("\n");
-    printFAT();
-}
-
 void multiPageFATTest() {
     // test is < 15 bytes -> 1 page per file
     AddressType ID;
@@ -102,12 +84,12 @@ int main() {
     Computer* computer = boot();
     printf("Computer booted\n");
 
-    unsigned char res = writeTest(5, 250);
+    unsigned char res = eraseTest(20, 250);
     if (res) {
-        printf("Error in writeTest\n");
+        printf("Error in eraseTest\n");
     }
     else {
-        printf("writeTest passed\n");
+        printf("eraseTest suceeded\n");
     }
 
     //DEBUG

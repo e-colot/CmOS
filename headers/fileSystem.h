@@ -15,5 +15,5 @@ unsigned char checkAddress(unsigned char* src, size_t value);
 size_t getFileSize(AddressType ID);
 size_t addFile(const char* filePath, AddressType ID);
 size_t loadFile(AddressType ID, unsigned char* mem, size_t len);
-void removeFile(AddressType ID);
+size_t removeFile(AddressType ID);
 
