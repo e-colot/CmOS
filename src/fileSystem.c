@@ -81,7 +81,7 @@ AddressType getFreePage() {
     page.value = (size_t)rand() % ((DISK_SIZE/PAGE_SIZE));
     while(0b1 << (7-(page.value%8)) & bitmap[page.value/8]) {
         // page already used
-        page.value = (size_t)rand() % ((DISK_SIZE/PAGE_SIZE));
+        page.value = (page.value + 1) % (DISK_SIZE/PAGE_SIZE);
     }
     free(bitmap);
     return page;
