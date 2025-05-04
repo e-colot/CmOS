@@ -156,30 +156,11 @@ unsigned char eraseTest(size_t fileNbr, size_t fileSize) {
         }
 
         //check in FAT if the file was removed
-        unsigned char* fat = malloc(PAGE_SIZE);
-        AddressType pageIndex;
-        pageIndex.value = FAT_START;
-        while (pageIndex.value) {
-            // interpret it as "while the next FAT page is not in 0"
-            diskRead(pageIndex.value*PAGE_SIZE, fat, 0, PAGE_SIZE);
-            AddressType ID;
-            ID.value = 0;
-            for (size_t i = 2; (i+2)*ADDRESSING_BYTES <= PAGE_SIZE; i=i+2) {
-                for (unsigned char j = 0; j < ADDRESSING_BYTES; j++) {
-                    ID.bytes[j] = *(fat + i*ADDRESSING_BYTES + j);
-                }
-            }
-            // check if the ID is the one we are looking for
-            if (ID.value == IDs[randomIndex].value) {
-                printf("File not removed from FAT\n");
-                free(fat);
-                free(IDs);
-                return 1;
-            }
-            // load next FAT page address
-            pageIndex = getAddress(fat + ADDRESSING_BYTES);
+        if(searchFAT(IDs[randomIndex]).value != 0) {
+            printf("File not correctly removed");
+            free(IDs);
+            return 1;
         }
-        free(fat);
 
         IDs[randomIndex].value = 0; // Mark as used
     }

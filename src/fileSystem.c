@@ -317,6 +317,13 @@ AddressType removeFromFAT(AddressType ID) {
 
 AddressType searchFAT(AddressType ID) {
     // returns the page at which the file is stored
+
+    if (FILE_ALLOCATION == 1) {
+        // file allocation is done with contiguous allocation
+        CA_FATEntry entry = CA_searchFAT(ID);
+        return entry.page;
+    }
+
     unsigned char* fat = malloc(PAGE_SIZE);
     AddressType pageIndex;
     pageIndex.value = FAT_START;
@@ -485,9 +492,16 @@ size_t loadFile(AddressType ID, unsigned char* dest, size_t len) {
 }
 
 size_t removeFile(AddressType ID) {
+
+    if (FILE_ALLOCATION == 1) {
+        // file allocation is done with contiguous allocation
+        return CA_removeFile(ID);
+    }
+
     AddressType index = removeFromFAT(ID);
     if (index.value == 0) {
         // file not found in FAT
+        printf("Trying to remove a non-existing file\n");
         return 1;
     }
     unsigned char* buffer = malloc(PAGE_SIZE);

@@ -71,7 +71,7 @@ AddressType CA_addToFAT(CA_FATEntry entry) {
             CA_setFATEntry(entryLocation, entry);
 
             // update the FAT length
-            FATinfo.length.value = FATinfo.length.value + 1;
+            FATinfo.length.value++;
             size_t FATSizeBytes = (FATinfo.length.value+1)*3*ADDRESSING_BYTES; 
             FATinfo.page.value = (FATSizeBytes + PAGE_SIZE - 1) / PAGE_SIZE;
             // set the FAT page
@@ -84,6 +84,26 @@ AddressType CA_addToFAT(CA_FATEntry entry) {
     }
     // only happens in case of error
     return zero;
+}
+
+void CA_removeFromFAT(AddressType index) {
+    // remove the entry from the FAT
+    // set the ID to 0
+    CA_FATEntry entry = CA_getFATEntry(index);
+    entry.ID.value = 0;
+    CA_setFATEntry(index, entry);
+
+    // if the entry is the last one, reduce the length of the FAT
+    AddressType zero = {0};
+    CA_FATEntry FATinfo = CA_getFATEntry(zero);
+    if (index.value == FATinfo.length.value) {
+        // remove the last entry
+        FATinfo.length.value--;
+        size_t FATSizeBytes = (FATinfo.length.value+1)*3*ADDRESSING_BYTES;
+        FATinfo.page.value = (FATSizeBytes + PAGE_SIZE - 1) / PAGE_SIZE;
+        // set the FAT page
+        CA_setFATEntry(zero, FATinfo);
+    }
 }
 
 CA_FATEntry CA_getFATEntry(AddressType location) {
@@ -111,7 +131,9 @@ void CA_setFATEntry(AddressType location, CA_FATEntry entry) {
 }
 
 CA_FATEntry CA_searchFAT(AddressType ID) {
-    // returns the page at which the file is stored
+    // returns the FAT entry corresponding to the given ID
+    // as the ID is known by the caller, it is replaced by the index of the entry
+    // if not found, returns an entry with length = 0
     AddressType index = {0};
     CA_FATEntry FATinfo = CA_getFATEntry(index);
     for (size_t i = 1; i <= FATinfo.length.value; i++) {
@@ -120,19 +142,26 @@ CA_FATEntry CA_searchFAT(AddressType ID) {
         CA_FATEntry entry = CA_getFATEntry(index);
         if (entry.ID.value == ID.value) {
             // the i-th entry corresponds to the ID to be found
+            // copy the page address to be returned
+            entry.ID = index;
             return entry;
         }
     }
     // if not found, return 0
-    FATinfo.length.value = 0;
+    FATinfo.page.value = 0;
     return FATinfo;
 }
 
 // --------------- file operations ---------------
 size_t CA_addFile(const char* filePath, AddressType ID) {
 
-    //TODO: check for ID collisions
-    // needs CA_searchFAT()
+    // check for ID collision
+    CA_FATEntry entryWithSameID = CA_searchFAT(ID);
+    if (entryWithSameID.page.value != 0) {
+        // file already exists
+        printf("File with the same ID already exists\n");
+        return 1;
+    }
 
     // compute file size
     int file = open(filePath, O_RDONLY);
@@ -210,5 +239,16 @@ size_t CA_loadFile(AddressType ID, unsigned char* mem, size_t len) {
         location.page.value++;
     }
     free(buffer);
+    return 0;
+}
+
+size_t CA_removeFile(AddressType ID) {
+    CA_FATEntry entry = CA_searchFAT(ID);
+    if (entry.page.value == 0) {
+        // file not found
+        printf("Trying to remove a non-existing file\n");
+        return 1;
+    }
+    CA_removeFromFAT(entry.ID);
     return 0;
 }

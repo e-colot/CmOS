@@ -19,13 +19,13 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
-    if(writeTest(15, 33) == 1) {
-        printf("Error in write test\n");
+    if(eraseTest(15, 50) == 1) {
+        printf("Error in erase test\n");
         shutdown(computer);
         return 1;
     }
     else {
-        printf("Write test succeeded\n");
+        printf("Erase test succeeded\n");
     }
 
     printf("FAT:\n");
