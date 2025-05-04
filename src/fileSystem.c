@@ -435,7 +435,11 @@ size_t addFile(const char* filePath, AddressType ID) {
         // link to 0 to indicate the end of the file
         nextPage.value = 0;
         setAddress(buffer, nextPage);
-        read(file, buffer + ADDRESSING_BYTES, PAGE_SIZE - ADDRESSING_BYTES);
+        ssize_t bytesRead = read(file, buffer + ADDRESSING_BYTES, PAGE_SIZE - ADDRESSING_BYTES);
+        if (bytesRead < PAGE_SIZE - ADDRESSING_BYTES) {
+            // fill the remaining buffer with 0xFF
+            memset(buffer + ADDRESSING_BYTES + bytesRead, 0xFF, PAGE_SIZE - ADDRESSING_BYTES - bytesRead);
+        }
         diskWrite(page.value*PAGE_SIZE, buffer, PAGE_SIZE);
     }
     free(buffer);
