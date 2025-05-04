@@ -6,95 +6,12 @@
 #include "os.h"
 #include "tests.h"
 
-// should disappear later
-#include "fileSystem.h"
-
-
-void multiPageFATTest() {
-    // test is < 15 bytes -> 1 page per file
-    AddressType ID;
-    ID.value = 0x25;
-    addFile("../programs/bin/test", ID);
-    ID.value = 0x26;
-    addFile("../programs/bin/test", ID);
-    ID.value = 0x27;
-    addFile("../programs/bin/test", ID);
-    ID.value = 0x28;
-    addFile("../programs/bin/test", ID);
-    ID.value = 0x29;
-    addFile("../programs/bin/test", ID);
-    ID.value = 0x2A;
-    addFile("../programs/bin/test", ID);
-    ID.value = 0x2B;
-    addFile("../programs/bin/test", ID);
-
-    printBitmap();
-    printf("\n");
-    printFAT();
-    printf("\n\n");
-
-    ID.value = 0x2C;
-    addFile("../programs/bin/test", ID);
-    ID.value = 0x2D;
-    addFile("../programs/bin/test", ID);
-    ID.value = 0x2E;
-    addFile("../programs/bin/test", ID);
-
-    printBitmap();
-    printf("\n");
-    printFAT();
-}
-
-void removeFATPageTest() {
-    AddressType ID;
-    ID.value = 0x25;
-    addFile("../programs/bin/test", ID);
-    ID.value = 0x26;
-    addFile("../programs/bin/test", ID);
-    ID.value = 0x27;
-    addFile("../programs/bin/test", ID);
-    ID.value = 0x28;
-    addFile("../programs/bin/test", ID);
-    ID.value = 0x29;
-    addFile("../programs/bin/test", ID);
-    ID.value = 0x2A;
-    addFile("../programs/bin/test", ID);
-    ID.value = 0x2B;
-    addFile("../programs/bin/test", ID);
-    // this will be in the second FAT page
-    ID.value = 0x2C;
-    addFile("../programs/bin/test", ID);
-
-    printFAT();
-    printf("\n\n");
-
-    // removes the program on the last FAT page
-    // removeFile(0x2C);
-    // removes a program on the first FAT page
-    ID.value = 0x27;
-    removeFile(ID);
-
-    printBitmap();
-    printf("\n");
-    printFAT();
-}
 
 int main() {    
     
     Computer* computer = boot();
-    printf("Computer booted\n");
 
-    unsigned char res = fatFillingTest(20, 250);
-    if (res) {
-        printf("Error in fatFillingTest\n");
-    }
-    else {
-        printf("fatFillingTest suceeded\n");
-    }
-
-    //DEBUG
-    printf("FAT:\n");
-    printFAT();
+    runTests();
 
     shutdown(computer);
     return 0;

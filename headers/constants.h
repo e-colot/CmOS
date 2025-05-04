@@ -1,7 +1,7 @@
 #pragma once
 
 #define RAM_SIZE 256
-#define DISK_SIZE (512 * 1024)
+#define DISK_SIZE (1024 * 1024)
 #define PAGE_SIZE 64
 #define MAX_PROCESSES 16
 
@@ -22,3 +22,6 @@
 #endif
 
 
+// TESTS PARAMETERS
+#define TEST_FILE_NBR 50
+#define TEST_FILE_SIZE 250

@@ -1,5 +1,6 @@
 #pragma once
 #include "constants.h"
+#include <stdio.h>
 
 // type used for addressing
 typedef union {
@@ -11,7 +12,7 @@ AddressType getAddress(unsigned char* src);
 void setAddress(unsigned char* dest, AddressType src);
 unsigned char checkAddress(unsigned char* src, size_t value);
 
-
+void reorganizeFAT();
 size_t getFileSize(AddressType ID);
 size_t addFile(const char* filePath, AddressType ID);
 size_t loadFile(AddressType ID, unsigned char* mem, size_t len);

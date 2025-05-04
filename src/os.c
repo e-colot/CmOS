@@ -18,6 +18,9 @@ Computer* boot() {
     comp->memory = createMemory();
     comp->processes = calloc(MAX_PROCESSES, sizeof(PCB*));
     
+    printf("Computer booted\n");
+    printf("Disk size: %zu\n", (size_t) DISK_SIZE);
+    printf("Page size: %zu\n\n", (size_t) PAGE_SIZE);
     return comp;
 }
 

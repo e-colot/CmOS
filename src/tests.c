@@ -155,7 +155,7 @@ unsigned char eraseTest(size_t fileNbr, size_t fileSize) {
         //check in FAT if the file was removed
         unsigned char* fat = malloc(PAGE_SIZE);
         AddressType pageIndex;
-        pageIndex.value = BITMAP_PAGES;
+        pageIndex.value = FAT_START;
         while (pageIndex.value) {
             // interpret it as "while the next FAT page is not in 0"
             diskRead(pageIndex.value*PAGE_SIZE, fat, 0, PAGE_SIZE);
@@ -269,4 +269,77 @@ unsigned char fatFillingTest(size_t fileNbr, size_t fileSize) {
     return 0;
 }
 
+unsigned char fatReorganizationTest(size_t fileNbr, size_t fileSize) {
+    // simply call eraseTest as it mess up the FAT
+    if(eraseTest(fileNbr, fileSize)) {
+        printf("Error in eraseTest\n");
+        return 1;
+    }
+
+    reorganizeFAT();
+
+    // check every FAT page (except the last one) to see if any entry is empty
+    unsigned char* fat = malloc(PAGE_SIZE);
+    AddressType pageIndex;
+    pageIndex.value = FAT_START;
+    while (pageIndex.value) {
+        // interpret it as "while the next FAT page is not in 0"
+        diskRead(pageIndex.value*PAGE_SIZE, fat, 0, PAGE_SIZE);
+        // load next FAT page address
+        pageIndex = getAddress(fat + ADDRESSING_BYTES);
+        if (pageIndex.value == 0) {
+            // if it is the last FAT page, do not check it as it can contain empty entries
+            break;
+        }
+
+        for (size_t i = 2; (i+2)*ADDRESSING_BYTES <= PAGE_SIZE; i=i+2) {
+            if (checkAddress(fat + i*ADDRESSING_BYTES, 0)) {
+                printf("Empty entry in FAT\n");
+                free(fat);
+                return 1;
+            }
+        }
+    }
+
+    free(fat);
+    return 0;
+}
+
+void runTests() {
+    printf("Running tests with:\n");
+    printf("File number: %zu\n", (size_t)TEST_FILE_NBR);
+    printf("File size: %zu\n\n", (size_t)TEST_FILE_SIZE);
+    if (writeTest(TEST_FILE_NBR, TEST_FILE_SIZE)) {
+        printf("Error in Write test\n");
+        return;
+    }
+    else {
+        printf("Write test succeeded\n");
+    }
+    diskInit(DISK_SIZE); // to avoid overfilling and duplicate ID's
+    if (eraseTest(TEST_FILE_NBR, TEST_FILE_SIZE)) {
+        printf("Error in Erase test\n");
+        return;
+    }
+    else {
+        printf("Erase test succeeded\n");
+    }
+    diskInit(DISK_SIZE);
+    if (fatFillingTest(TEST_FILE_NBR, TEST_FILE_SIZE)) {
+        printf("Error in FAT filling test\n");
+        return;
+    }
+    else {
+        printf("FAT filling test succeeded\n");
+    }
+    diskInit(DISK_SIZE);
+    if (fatReorganizationTest(TEST_FILE_NBR, TEST_FILE_SIZE)) {
+        printf("Error in FAT reorganization test\n");
+        return;
+    }
+    else {
+        printf("FAT reorganization test succeeded\n");
+    }
+    printf("\nAll tests passed\n\n");
+}
 
