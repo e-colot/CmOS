@@ -5,17 +5,25 @@
 #include "devTools.h"
 #include "os.h"
 #include "tests.h"
+#include "fileSystem.h"
 
-
-int main() {    
+int main(int argc, char* argv[]) {    
     
     Computer* computer = boot();
 
-    runTests();
+    // Check if the program is run in test mode
+    if (argc > 1 && strcmp(argv[1], "--test") == 0) {
+        runTests();
+        shutdown(computer);
+        return 0;
+    }
+
+    AddressType ID;
+    ID.value = 1;
+    addFile("../programs/bin/multiplication", ID);
 
     shutdown(computer);
     return 0;
-
 }
 
 
