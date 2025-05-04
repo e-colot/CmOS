@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include "fileSystem.h"
+#include "contiguousAllocation.h"
 #include "constants.h"
 #include "disk.h"
 
@@ -361,6 +362,11 @@ size_t getFileSize(AddressType ID) {
 
 size_t addFile(const char* filePath, AddressType ID) {
 
+    if (FILE_ALLOCATION == 1) {
+        // file allocation is done with contiguous allocation
+        return CA_addFile(filePath, ID);
+    }
+
     // check if there already exists a file with the same ID
     AddressType pageWithSameID = searchFAT(ID);
     if (pageWithSameID.value != 0) {
@@ -388,7 +394,7 @@ size_t addFile(const char* filePath, AddressType ID) {
 
     // number of pages needed
     size_t pagesNbr = fileSize/(PAGE_SIZE - ADDRESSING_BYTES);
-        // -ADDRESSING_BYTES because the first bytes are used for the address of the next page
+    // -ADDRESSING_BYTES because the first bytes are used for the address of the next page
     if (fileSize % (PAGE_SIZE - ADDRESSING_BYTES) != 0) {
         pagesNbr++;
     }
@@ -430,7 +436,7 @@ size_t addFile(const char* filePath, AddressType ID) {
         // link to 0 to indicate the end of the file
         nextPage.value = 0;
         setAddress(buffer, nextPage);
-        ssize_t bytesRead = read(file, buffer + ADDRESSING_BYTES, PAGE_SIZE - ADDRESSING_BYTES);
+        size_t bytesRead = read(file, buffer + ADDRESSING_BYTES, PAGE_SIZE - ADDRESSING_BYTES);
         if (bytesRead < PAGE_SIZE - ADDRESSING_BYTES) {
             // fill the remaining buffer with 0xFF
             memset(buffer + ADDRESSING_BYTES + bytesRead, 0xFF, PAGE_SIZE - ADDRESSING_BYTES - bytesRead);
@@ -443,6 +449,11 @@ size_t addFile(const char* filePath, AddressType ID) {
 }
 
 size_t loadFile(AddressType ID, unsigned char* dest, size_t len) {
+
+    if (FILE_ALLOCATION == 1) {
+        // file allocation is done with contiguous allocation
+        return CA_loadFile(ID, dest, len);
+    }
     
     // Step 1: get the number of pages
     AddressType firstPageIndex = searchFAT(ID);

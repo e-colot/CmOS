@@ -60,9 +60,12 @@ unsigned char writeTest(size_t fileNbr, size_t fileSize) {
 
     unsigned char error = 0;
     // adjustedFileSize as fileSize is not a multiple of PAGE_SIZE
-    size_t adjustedFileSize = fileSize/(PAGE_SIZE - ADDRESSING_BYTES);
-    if (fileSize % (PAGE_SIZE-ADDRESSING_BYTES) != 0) {
-        adjustedFileSize ++;
+    size_t adjustedFileSize;
+    if (FILE_ALLOCATION == 0) {
+        adjustedFileSize = (fileSize+PAGE_SIZE-ADDRESSING_BYTES-1)/(PAGE_SIZE-ADDRESSING_BYTES);
+    }
+    else {
+        adjustedFileSize = (fileSize+PAGE_SIZE-1)/PAGE_SIZE;
     }
     adjustedFileSize *= (PAGE_SIZE);
     // load a random copy of the file

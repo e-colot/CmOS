@@ -1,6 +1,7 @@
 # TODO
 
 - Implement a contiguous allocation mode
+- Make a complete test (mix of write, erase, read)
 - Measure impact of page size
 - Compare type of file storage
 - implement a first process management algorithm
@@ -10,8 +11,9 @@
 ## Contiguous allocation
     - [x] disk init 
     - [x] FAT setup
-    - [ ] File insertion
-    - [ ] File removal
+    - [x] Adding files
+    - [ ] Removing Files
+    - [ ] Inserting files in holes
     - [ ] File displacement
     - [ ] Disk defragmentation
 
