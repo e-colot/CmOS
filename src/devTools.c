@@ -1,6 +1,7 @@
 #include "devTools.h"
 #include "constants.h"
 #include "fileSystem.h"
+#include "contiguousAllocation.h"
 #include <stdio.h>
 
 #include "disk.h" // For diskRead
@@ -55,30 +56,62 @@ void printBitmap() {
 }
 
 void printFAT() {
-    unsigned char* fat = malloc(PAGE_SIZE);
-    // page index starts after the bitmap pages
-    // the bitmap takes DISK_SIZE/(8*PAGE_SIZE)
-    // this corresponds to DISK_SIZE/(8*PAGE_SIZE*PAGE_SIZE) pages
-    AddressType pageIndex;
-    pageIndex.value = BITMAP_PAGES;
-    while (pageIndex.value) {
-        // interpret it as "while the next FAT page is not in 0"
-        diskRead(pageIndex.value*PAGE_SIZE, fat, 0, PAGE_SIZE);
-        for (size_t i = 0; i < PAGE_SIZE; i++) {
-            printf("%02X", fat[i]);
-            if (i % ADDRESSING_BYTES == ADDRESSING_BYTES - 1) {
-                printf(" ");
+    if (FILE_ALLOCATION == 0) {
+        unsigned char* fat = malloc(PAGE_SIZE);
+        // page index starts after the bitmap pages
+        // the bitmap takes DISK_SIZE/(8*PAGE_SIZE)
+        // this corresponds to DISK_SIZE/(8*PAGE_SIZE*PAGE_SIZE) pages
+        AddressType pageIndex;
+        pageIndex.value = BITMAP_PAGES;
+        while (pageIndex.value) {
+            // interpret it as "while the next FAT page is not in 0"
+            diskRead(pageIndex.value*PAGE_SIZE, fat, 0, PAGE_SIZE);
+            for (size_t i = 0; i < PAGE_SIZE; i++) {
+                printf("%02X", fat[i]);
+                if (i % ADDRESSING_BYTES == ADDRESSING_BYTES - 1) {
+                    printf(" ");
+                }
+                if (i % (2*ADDRESSING_BYTES) == 2*ADDRESSING_BYTES - 1) {
+                    printf("\n");
+                }
             }
-            if (i % (2*ADDRESSING_BYTES) == 2*ADDRESSING_BYTES - 1) {
+            if (PAGE_SIZE % (2*ADDRESSING_BYTES) != 0) {
                 printf("\n");
             }
+            printf("End of FAT page located at 0x%x\n", pageIndex.value);
+            pageIndex = getAddress(fat + ADDRESSING_BYTES);
         }
-        if (PAGE_SIZE % (2*ADDRESSING_BYTES) != 0) {
+        free(fat);
+        printf("End of FAT\n\n");
+    } 
+    else {
+        AddressType index = {0};
+        CA_FATEntry entry = CA_getFATEntry(index);
+        for (size_t i = entry.length.value; i+1 > 0; i--) {
+            // for each entry in the FAT
+
+            // show the entry ID
+            printf("ID: ");
+            for (size_t j = 0; j < ADDRESSING_BYTES; j++) {
+                printf("%02X", entry.ID.bytes[j]);
+            }
+            printf("    ");
+            // show the entry page
+            printf("Page: ");
+            for (size_t j = 0; j < ADDRESSING_BYTES; j++) {
+                printf("%02X", entry.page.bytes[j]);
+            }
+            printf("    ");
+            // show the entry length
+            printf("Length: ");
+            for (size_t j = 0; j < ADDRESSING_BYTES; j++) {
+                printf("%02X", entry.length.bytes[j]);
+            }
             printf("\n");
+            // get the next entry
+            index.value = index.value + 1;
+            entry = CA_getFATEntry(index);
         }
-        printf("End of FAT page located at 0x%x\n", pageIndex.value);
-        pageIndex = getAddress(fat + ADDRESSING_BYTES);
+
     }
-    free(fat);
-    printf("End of FAT\n\n");
 }

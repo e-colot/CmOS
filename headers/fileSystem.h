@@ -14,8 +14,12 @@ unsigned char checkAddress(unsigned char* src, size_t value);
 
 void getPage(AddressType pos, unsigned char* buffer);
 void setPage(AddressType pos, unsigned char* buffer);
+
+// Bitmap operations
 AddressType getFreePage();
 void updateBitmap(AddressType page);
+
+// FAT operations
 void addToFAT(AddressType ID, AddressType page);
 void removeFATPage(AddressType page);
 AddressType removeFromFAT(AddressType ID);

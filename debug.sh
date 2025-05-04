@@ -10,12 +10,10 @@ make
 
 clear
 
-# Start gdb with the compiled binary
-gdb -q ./CmOS
-
-# Chose the line at which to break
-# break fileSystem.c:94
-
-# Run the program
-# run
+# Check for arguments and decide how to debug
+if [[ "$1" == "--test" ]]; then
+    gdb -q -args ./CmOS --test
+else
+    gdb -q ./CmOS
+fi
 

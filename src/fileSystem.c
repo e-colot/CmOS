@@ -73,8 +73,7 @@ AddressType getFreePage() {
     if (full) {
         free(bitmap);
         printf("Disk full\n");
-        AddressType zero;
-        zero.value = 0;
+        AddressType zero = {0};
         return zero;
     }
 
@@ -137,8 +136,7 @@ void addToFAT(AddressType ID, AddressType page) {
     
     setAddress(fat, pageIndex); // last FAT page (reverse linking)
     // set next FAT page address as zero (to indicate it is the last one)
-    AddressType zero;
-    zero.value = 0x00;
+    AddressType zero = {0};
     setAddress(fat + ADDRESSING_BYTES, zero);
     // set the ID and page in the new FAT page
     setAddress(fat + 2*ADDRESSING_BYTES, ID);
@@ -216,8 +214,7 @@ void reorganizeFAT() {
     size_t lowerPageEntry = 2; // index of the current entry in the lower FAT page
     size_t upperPageEntry = 2; // index of the current entry in the upper FAT page
     
-    AddressType zero;
-    zero.value = 0;
+    AddressType zero = {0};
 
     while (lowerPageIndex.value != upperPageIndex.value) {
         // while both pointers are on a different page
@@ -296,8 +293,7 @@ AddressType removeFromFAT(AddressType ID) {
         for (size_t i = 2; (i+2)*ADDRESSING_BYTES <= PAGE_SIZE; i=i+2) {
             if (checkAddress((fat + i*ADDRESSING_BYTES), ID.value)) {
                 // the i-th entry corresponds to the ID to be removed
-                AddressType zero;
-                zero.value = 0x00;
+                AddressType zero = {0};
                 setAddress(fat + i*ADDRESSING_BYTES, zero);
 
                 // copy the page address to be returned
@@ -314,8 +310,7 @@ AddressType removeFromFAT(AddressType ID) {
     }
     free(fat);
     printf("Trying to remove a non-existing file\n");
-    AddressType zero;
-    zero.value = 0;
+    AddressType zero = {0};
     return zero;
 }
 
