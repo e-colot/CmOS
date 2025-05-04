@@ -308,7 +308,13 @@ unsigned char fatReorganizationTest(size_t fileNbr, size_t fileSize) {
 void runTests() {
     printf("Running tests with:\n");
     printf("File number: %zu\n", (size_t)TEST_FILE_NBR);
-    printf("File size: %zu\n\n", (size_t)TEST_FILE_SIZE);
+    if (TEST_FILE_SIZE < 1024) {
+        printf("File size: %zu B\n\n", (size_t)TEST_FILE_SIZE);
+    } else if (TEST_FILE_SIZE < 1024 * 1024) {
+        printf("File size: %zu kB\n\n", (size_t)(TEST_FILE_SIZE / 1024));
+    } else {
+        printf("File size: %zu MB\n\n", (size_t)(TEST_FILE_SIZE / (1024 * 1024)));
+    }
     if (writeTest(TEST_FILE_NBR, TEST_FILE_SIZE)) {
         printf("Error in Write test\n");
         return;

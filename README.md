@@ -9,7 +9,7 @@
     - compare process management algorithms
     - revisit ISA
 ## 2. Contiguous allocation
-    - [x] disk init 
+    - [ ] disk init 
     - [ ] FAT setup
     - [ ] File insertion
     - [ ] File removal

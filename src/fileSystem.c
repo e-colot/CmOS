@@ -283,7 +283,7 @@ void reorganizeFAT() {
     return;
 }
 
-AddressType removeFromFat(AddressType ID) {
+AddressType removeFromFAT(AddressType ID) {
 
     // remove the file from the FAT and return the first page address
     unsigned char* fat = malloc(PAGE_SIZE);
@@ -469,7 +469,7 @@ size_t loadFile(AddressType ID, unsigned char* dest, size_t len) {
     AddressType pageIndex = firstPageIndex;
     for (size_t i = 0; i < pagesNbr; i++) {
         getPage(pageIndex, pageBuffer);
-        for (unsigned char j = ADDRESSING_BYTES; j < PAGE_SIZE; j++) {
+        for (size_t j = ADDRESSING_BYTES; j < PAGE_SIZE; j++) {
             *(destPtr++) = pageBuffer[j];
         }
         pageIndex = getAddress(pageBuffer);
@@ -479,7 +479,7 @@ size_t loadFile(AddressType ID, unsigned char* dest, size_t len) {
 }
 
 size_t removeFile(AddressType ID) {
-    AddressType index = removeFromFat(ID);
+    AddressType index = removeFromFAT(ID);
     if (index.value == 0) {
         // file not found in FAT
         return 1;

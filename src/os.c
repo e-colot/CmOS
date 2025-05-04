@@ -19,8 +19,19 @@ Computer* boot() {
     comp->processes = calloc(MAX_PROCESSES, sizeof(PCB*));
     
     printf("Computer booted\n");
-    printf("Disk size: %zu\n", (size_t) DISK_SIZE);
-    printf("Page size: %zu\n\n", (size_t) PAGE_SIZE);
+    if (DISK_SIZE < 1024) {
+        printf("Disk size: %zu B\n", (size_t) DISK_SIZE);
+    } else if (DISK_SIZE < 1024 * 1024) {
+        printf("Disk size: %zu kB\n", (size_t) DISK_SIZE / 1024);
+    } else {
+        printf("Disk size: %zu MB\n", (size_t) DISK_SIZE / (1024 * 1024));
+    }
+
+    if (PAGE_SIZE < 1024) {
+        printf("Page size: %zu B\n\n", (size_t) PAGE_SIZE);
+    } else {
+        printf("Page size: %zu kB\n\n", (size_t) PAGE_SIZE / 1024);
+    }
     return comp;
 }
 

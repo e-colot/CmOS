@@ -24,20 +24,24 @@ void diskInit(size_t dimensions) {
     int disk = open("disk", O_WRONLY | O_CREAT | O_TRUNC, 0644);
 
     // initiate the bitmap by setting '1' on the bitmap address + 1st FAT table
-    size_t bitmapSize = (BITMAP_PAGES + 1) / 8 + 1; 
-    unsigned char* bitmap = calloc(bitmapSize, sizeof(unsigned char));
-    size_t index = 0;
-    size_t bit = 0;
-    size_t bitsLeft = BITMAP_PAGES + 1;
-    while(bitsLeft--) {
-        *(bitmap+index) = *(bitmap+index) | (0x80 >> bit);
-        if (++bit == 8) {
-            index += 1;
-            bit = 0;
+    // only done if bitmap and FAT are used
+    size_t bitmapSize = 0;
+    if (FILE_ALLOCATION == 0) {
+        bitmapSize = (BITMAP_PAGES + 1) / 8 + 1; 
+        unsigned char* bitmap = calloc(bitmapSize, sizeof(unsigned char));
+        size_t index = 0;
+        size_t bit = 0;
+        size_t bitsLeft = BITMAP_PAGES + 1;
+        while(bitsLeft--) {
+            *(bitmap+index) = *(bitmap+index) | (0x80 >> bit);
+            if (++bit == 8) {
+                index += 1;
+                bit = 0;
+            }
         }
+        write(disk, bitmap, bitmapSize);
+        free(bitmap);
     }
-    write(disk, bitmap, bitmapSize);
-    free(bitmap);
 
     //Writing 1024 '0'-bytes at a time
     unsigned char buffer[1024] = {0};
