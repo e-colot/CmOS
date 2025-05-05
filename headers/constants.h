@@ -1,7 +1,7 @@
 #pragma once
 
 #define RAM_SIZE 256
-#define DISK_SIZE (8 * 1024)
+#define DISK_SIZE 512
 #define PAGE_SIZE 16
 #define FILE_ALLOCATION 1 // 0 = bitmap + FAT, 1 = Contiguous Allocation
 #define MAX_PROCESSES 16

@@ -19,6 +19,8 @@ CA_FATEntry CA_getFATEntry(AddressType location);
 void CA_setFATEntry(AddressType location, CA_FATEntry entry);
 CA_FATEntry CA_searchFAT(AddressType ID);
 
+size_t diskDefragmentation();
+
 // File operations
 size_t CA_addFile(const char* filePath, AddressType ID);
 size_t CA_loadFile(AddressType ID, unsigned char* mem, size_t len);

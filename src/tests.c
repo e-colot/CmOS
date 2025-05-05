@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <stdlib.h>
 
 #include "devTools.h"
 #include "fileSystem.h"
@@ -166,6 +167,145 @@ unsigned char eraseTest(size_t fileNbr, size_t fileSize) {
     }
 
     free(IDs);
+    return 0;
+}
+
+unsigned char multipleWriteEraseTest(size_t maxMinItr) {
+    // randomness initialization
+    static int seedInitialized = 0;
+    if (!seedInitialized) {
+        unsigned int seed = time(NULL);
+        srand(seed);
+        seedInitialized = 1;
+    }
+
+    // Create multiple files of varying sizes
+    // Create 5 files with sizes as multiples of (PAGE_SIZE - ADDRESSING_BYTES)
+    char filePaths[5][30];
+    for (int i = 0; i < 5; i++) {
+        snprintf(filePaths[i], sizeof(filePaths[i]), "../programs/bin/randomFile%d", i + 1);
+        FILE *file = fopen(filePaths[i], "wb");
+        if (!file) {
+            printf("Failed to create file %s\n", filePaths[i]);
+            return 1;
+        }
+        size_t fileSize = (i + 1) * (PAGE_SIZE - ADDRESSING_BYTES);
+        for (size_t j = 0; j < fileSize; j++) {
+            unsigned char randomByte = rand() % 0xFF;
+            fwrite(&randomByte, sizeof(unsigned char), 1, file);
+        }
+        fclose(file);
+    }
+    AddressType ID;
+    ID.value = 1;
+    AddressType* usedIDs = malloc((DISK_SIZE / PAGE_SIZE) * sizeof(AddressType));
+    if (!usedIDs) {
+        printf("Failed to allocate memory for usedIDs\n");
+        return 1;
+    }
+    size_t usedIDCount = 0;
+
+    for (; maxMinItr > 0; maxMinItr--) {
+        // Add random files until the disk gets full
+        while (1) {
+            int randomIndex = rand() % 5;
+
+            if (addFile(filePaths[randomIndex], ID)) {
+                // disk is full
+                break;
+            }
+
+            usedIDs[usedIDCount++] = ID; // Store the used ID
+            // Generate a new unique ID
+            do {
+                ID.value = rand() % 0xFFFFFFFF;
+                // set to 0 the bytes that are not used for addressing
+                for (size_t j = 3; j >= ADDRESSING_BYTES; j--) {
+                    ID.bytes[j] = 0;
+                }
+                // avoid ID = 0
+                if (ID.value == 0) {
+                    continue;
+                }
+                // Ensure the ID is not already in usedIDs
+                int isUnique = 1;
+                for (size_t i = 0; i < usedIDCount; i++) {
+                    if (usedIDs[i].value == ID.value) {
+                        isUnique = 0;
+                        break;
+                    }
+                }
+                if (isUnique) {
+                    break;
+                }
+            } 
+            while (1);
+        }
+
+        // Remove 50% of the IDs
+        size_t removeCount = usedIDCount / 2;
+        for (size_t i = 0; i < removeCount; i++) {
+            size_t randomIndex = rand() % usedIDCount;
+            while (usedIDs[randomIndex].value == 0) {
+                randomIndex = rand() % usedIDCount;
+            }
+
+            if (removeFile(usedIDs[randomIndex])) {
+                printf("Error removing file with ID: %x\n", usedIDs[randomIndex].value);
+                free(usedIDs);
+                return 1;
+            }
+
+            usedIDs[randomIndex].value = 0; // Mark as removed
+        }
+
+        // reset usedIDs and usedIDCount
+        size_t oldUsedIDCount = usedIDCount;
+        usedIDCount = 0;
+        for (size_t i = 0; i < oldUsedIDCount; i++) {
+            if(usedIDs[i].value != 0) {
+                usedIDs[usedIDCount++] = usedIDs[i];
+            }
+        }
+    }
+
+    // Add random files until the disk gets full
+    while (1) {
+        int randomIndex = rand() % 5;
+
+        if (addFile(filePaths[randomIndex], ID)) {
+            // disk is full
+            break;
+        }
+
+        usedIDs[usedIDCount++] = ID; // Store the used ID
+        // Generate a new unique ID
+        do {
+            ID.value = rand() % 0xFFFFFFFF;
+            // set to 0 the bytes that are not used for addressing
+            for (size_t j = 3; j >= ADDRESSING_BYTES; j--) {
+                ID.bytes[j] = 0;
+            }
+            // avoid ID = 0
+            if (ID.value == 0) {
+                continue;
+            }
+            // Ensure the ID is not already in usedIDs
+            int isUnique = 1;
+            for (size_t i = 0; i < usedIDCount; i++) {
+                if (usedIDs[i].value == ID.value) {
+                    isUnique = 0;
+                    break;
+                }
+            }
+            if (isUnique) {
+                break;
+            }
+        } 
+        while (1);
+    }
+
+    free(usedIDs);
     return 0;
 }
     

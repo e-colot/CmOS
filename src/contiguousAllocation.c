@@ -53,13 +53,16 @@ AddressType CA_addToFAT(CA_FATEntry entry) {
         return entry.page;
     }
     else {
+        // check if there is enough space at the end of the FAT
+
         // because the files are put from end to start, checking if the file fits is easy
         size_t lastPage = lastEntry.page.value;
 
-        // +1 as FATinfo takes space too
-        size_t endOfFAT = (FATinfo.length.value+1)*3*ADDRESSING_BYTES; // number of bytes taken by FAT
+        // +2 as FATinfo takes 1 entry and the new entry will also take 1 entry
+        size_t endOfFAT = (FATinfo.length.value+2)*3*ADDRESSING_BYTES; // number of bytes taken by FAT
         endOfFAT = (endOfFAT + PAGE_SIZE - 1) / PAGE_SIZE; // number of pages taken by FAT
-        if (lastPage-endOfFAT >= entry.length.value) {
+        if (lastPage >= endOfFAT && lastPage-endOfFAT >= entry.length.value) {
+            // first part of the condition avoids negative values for lastPage-endOfFAT
             // there is enough space to store the new entry
             // add the entry to the FAT
             AddressType entryLocation;
@@ -78,32 +81,97 @@ AddressType CA_addToFAT(CA_FATEntry entry) {
             CA_setFATEntry(zero, FATinfo);
             return entry.page;
         }
-        // if not, we need to find a free space in between existing entries
-        printf("Not enough space to add the entry\n");
-        //TODO
+        // case of "file insertion"
+        // check between existing entries to fit the new entry
+
+        // it can only work if no new FAT page which would 'overflow' on the last file is created
+        AddressType futureFATentries = FATinfo.length;
+        futureFATentries.value++;
+        size_t futureFATpageNbr = (futureFATentries.value+1)*3*ADDRESSING_BYTES;
+        futureFATpageNbr = (futureFATpageNbr + PAGE_SIZE - 1) / PAGE_SIZE;
+        size_t firstFilePage = CA_getFATEntry(FATinfo.length).page.value;
+        if (futureFATpageNbr > firstFilePage) {
+            // FAT page would overflow on the last file
+            // defragmentation needed
+            diskDefragmentation();
+            return zero;
+        }
+
+        CA_FATEntry entryToCheck, nextEntry;
+        AddressType entryToCheckIndex;
+        // the first entry is at index 1
+        // however, to be able to add a file even before the first entry the following must be done:
+        // set the first entry index to 0
+        entryToCheckIndex.value = 0;
+        // set the first entry page to the maximal page on the disk
+        entryToCheck.page.value = DISK_SIZE / PAGE_SIZE;
+        while(entryToCheckIndex.value+1 <= FATinfo.length.value) {
+            entryToCheckIndex.value++;
+            nextEntry = CA_getFATEntry(entryToCheckIndex);
+            // check if there is enough space between the two entries
+            size_t space = entryToCheck.page.value - (nextEntry.page.value + nextEntry.length.value);
+            if (space >= entry.length.value) {
+                // there is enough space to store the new entry
+                // add the entry to the FAT at entryToCheckIndex to maintain the order
+                // this means all other entries need to be shifted
+
+                // loads the new entry
+                entry.page.value = nextEntry.page.value + nextEntry.length.value;
+                CA_FATEntry entryToShift = entry;
+                while (entryToCheckIndex.value <= FATinfo.length.value) {
+                    // load previous entry
+                    CA_FATEntry tmp = CA_getFATEntry(entryToCheckIndex);
+                    // set the new entry
+                    CA_setFATEntry(entryToCheckIndex, entryToShift);
+                    // update the entry to shift
+                    entryToShift = tmp;
+                    // update the entry index
+                    entryToCheckIndex.value++;
+                }
+                // still need to set the last entry
+                CA_setFATEntry(entryToCheckIndex, entryToShift);
+                // update the FAT length
+                FATinfo.length.value++;
+                size_t FATSizeBytes = (FATinfo.length.value+1)*3*ADDRESSING_BYTES;
+                FATinfo.page.value = (FATSizeBytes + PAGE_SIZE - 1) / PAGE_SIZE;
+                // set the FAT page
+                CA_setFATEntry(zero, FATinfo);
+                return entry.page;
+            }
+            // load the entru for the next iteration
+            entryToCheck = CA_getFATEntry(entryToCheckIndex);
+        }
+        // if not, we need to defragment the disk
+        diskDefragmentation();
     }
     // only happens in case of error
     return zero;
 }
 
 void CA_removeFromFAT(AddressType index) {
-    // remove the entry from the FAT
-    // set the ID to 0
-    CA_FATEntry entry = CA_getFATEntry(index);
-    entry.ID.value = 0;
-    CA_setFATEntry(index, entry);
+    // remove the entry located at index from the FAT
 
-    // if the entry is the last one, reduce the length of the FAT
+    // loads the FAT info
     AddressType zero = {0};
     CA_FATEntry FATinfo = CA_getFATEntry(zero);
-    if (index.value == FATinfo.length.value) {
-        // remove the last entry
-        FATinfo.length.value--;
-        size_t FATSizeBytes = (FATinfo.length.value+1)*3*ADDRESSING_BYTES;
-        FATinfo.page.value = (FATSizeBytes + PAGE_SIZE - 1) / PAGE_SIZE;
-        // set the FAT page
-        CA_setFATEntry(zero, FATinfo);
+
+    // shifts everything after it to the left
+    index.value++;
+    CA_FATEntry entryToShift = CA_getFATEntry(index);
+    while (index.value <= FATinfo.length.value) {
+        // set the new entry
+        index.value--;
+        CA_setFATEntry(index, entryToShift);
+        // load the next entry
+        index.value += 2;
+        entryToShift = CA_getFATEntry(index);
     }
+    // reduce the FAT length by 1
+    FATinfo.length.value--;
+    size_t FATSizeBytes = (FATinfo.length.value+1)*3*ADDRESSING_BYTES;
+    FATinfo.page.value = (FATSizeBytes + PAGE_SIZE - 1) / PAGE_SIZE;
+    // set the FAT page
+    CA_setFATEntry(zero, FATinfo);
 }
 
 CA_FATEntry CA_getFATEntry(AddressType location) {
@@ -152,6 +220,17 @@ CA_FATEntry CA_searchFAT(AddressType ID) {
     return FATinfo;
 }
 
+
+
+
+size_t diskDefragmentation() {
+    //TODO
+    printf("Defragmentation not implemented\n");
+    return 1;
+}
+
+
+
 // --------------- file operations ---------------
 size_t CA_addFile(const char* filePath, AddressType ID) {
 
@@ -190,7 +269,6 @@ size_t CA_addFile(const char* filePath, AddressType ID) {
     AddressType pageIndex = CA_addToFAT(entry);
     if (pageIndex.value == 0) {
         // no free page available
-        printf("No free page available\n");
         close(file);
         return 1;
     }

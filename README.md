@@ -12,11 +12,14 @@
     - [x] disk init 
     - [x] FAT setup
     - [x] Adding files
-    - [ ] Removing Files
-    - [ ] Inserting files in holes
+    - [x] Removing Files
+    - [x] Inserting files in holes
+    - [ ] Update FAT tests
     - [ ] File displacement
     - [ ] Disk defragmentation
 
 # Known issues
 
-might remove memPos from diskRead (obsolete argument)
+# Small things to do
+
+- might remove memPos from diskRead (obsolete argument)
