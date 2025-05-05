@@ -209,7 +209,6 @@ unsigned char multipleWriteEraseTest(size_t maxMinItr) {
         // Add random files until the disk gets full
         while (1) {
             int randomIndex = rand() % 5;
-
             if (addFile(filePaths[randomIndex], ID)) {
                 // disk is full
                 break;

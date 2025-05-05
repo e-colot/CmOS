@@ -20,6 +20,8 @@
 
 # Known issues
 
+reorganizeFAT not working for a single FAT page ??
+
 # Small things to do
 
 - might remove memPos from diskRead (obsolete argument)

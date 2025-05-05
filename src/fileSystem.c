@@ -57,7 +57,8 @@ AddressType getFreePage() {
     // implies a variable execution time
     static int seedInitialized = 0;
     if (!seedInitialized) {
-        srand(time(NULL));
+        unsigned int seed = time(NULL);
+        srand(seed);
         seedInitialized = 1;
     }
     unsigned char* bitmap = malloc(BITMAP_SIZE);
@@ -72,8 +73,8 @@ AddressType getFreePage() {
     }
 
     if (full) {
+        // disk full
         free(bitmap);
-        printf("Disk full\n");
         AddressType zero = {0};
         return zero;
     }
@@ -97,8 +98,11 @@ void updateBitmap(AddressType page) {
     free(bitmap);
 }
 
-void addToFAT(AddressType ID, AddressType page) {
+size_t addToFAT(AddressType ID, AddressType page) {
     // adds the entry [ID, page] to the FAT
+    // takes care of updating the bitmap
+    // return 1 if an error occurs, 0 otherwise
+
     unsigned char* fat = malloc(PAGE_SIZE);
     AddressType pageIndex;
 
@@ -123,13 +127,17 @@ void addToFAT(AddressType ID, AddressType page) {
                 setAddress(fat + i*ADDRESSING_BYTES + ADDRESSING_BYTES, page);
                 setPage(pageIndex, fat);
                 free(fat);
-                return;
+                return 0;
             }
         }
     }
 
     // all FAT pages are full -> create a new one
     AddressType newPageIndex = getFreePage();
+    if (newPageIndex.value == 0) {
+        // no free page available
+        return 1;
+    }
     updateBitmap(newPageIndex);
     setAddress(fat + ADDRESSING_BYTES, newPageIndex);
     // stores the modified FAT page
@@ -148,6 +156,7 @@ void addToFAT(AddressType ID, AddressType page) {
     setPage(newPageIndex, fat);
 
     free(fat);
+    return 0;
 }
 
 void removeFATPage(AddressType pageIndex) {
@@ -174,7 +183,7 @@ void removeFATPage(AddressType pageIndex) {
         }
     }
 
-    if (previousIndex.value == 0) {
+    if (previousIndex.value != 0) {
         // if it was not the first FAT page
         // load the previous FAT page
         getPage(previousIndex, fat);
@@ -302,7 +311,7 @@ AddressType removeFromFAT(AddressType ID) {
 
                 setPage(pageIndex, fat);
                 free(fat);
-                //reorganizeFAT(pageIndex); // will remove the FAT page if it is empty
+                removeFATPage(pageIndex); // will remove the FAT page if it is empty
                 return ret;
             }
         }
@@ -400,32 +409,45 @@ size_t addFile(const char* filePath, AddressType ID) {
     lseek(file, 0, SEEK_SET);
 
     // number of pages needed
-    size_t pagesNbr = fileSize/(PAGE_SIZE - ADDRESSING_BYTES);
+    size_t pagesNbr = (fileSize + PAGE_SIZE - ADDRESSING_BYTES - 1)/(PAGE_SIZE - ADDRESSING_BYTES);
     // -ADDRESSING_BYTES because the first bytes are used for the address of the next page
-    if (fileSize % (PAGE_SIZE - ADDRESSING_BYTES) != 0) {
-        pagesNbr++;
-    }
 
     unsigned char* buffer = malloc(PAGE_SIZE);
     AddressType page = getFreePage();
     if (page.value == 0) {
-        // no free page available
+        // no free page available for the first page of the file
         free(buffer);
         close(file);
         return 1;
     }
 
     updateBitmap(page);
-    addToFAT(ID, page);
+    if(addToFAT(ID, page) != 0) {
+        // no free page when trying to add a FAT page
+        // remove the page of the file from the bitmap
+        updateBitmap(page);
 
-    AddressType nextPage;
+        free(buffer);
+        close(file);
+        return 1;
+    }
+
+    // set to page to later be reattributed to previousPage
+    AddressType nextPage = page;
+    AddressType previousPage;
 
     while(pagesNbr > 1) {
+        previousPage = nextPage;
         nextPage = getFreePage();
         if (nextPage.value == 0) {
             // no free page available
-            free(buffer);
             close(file);
+            // before removing, the last page must be marked as the last page
+            getPage(previousPage, buffer);
+            AddressType zero = {0};
+            setAddress(buffer, zero);
+            setPage(previousPage, buffer);
+            free(buffer);
             removeFile(ID);
             return 1;
         }

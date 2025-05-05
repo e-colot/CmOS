@@ -20,7 +20,7 @@ AddressType getFreePage();
 void updateBitmap(AddressType page);
 
 // FAT operations
-void addToFAT(AddressType ID, AddressType page);
+size_t addToFAT(AddressType ID, AddressType page);
 void removeFATPage(AddressType page);
 AddressType removeFromFAT(AddressType ID);
 AddressType searchFAT(AddressType ID);
