@@ -21,7 +21,6 @@ void updateBitmap(AddressType page);
 
 // FAT operations
 size_t addToFAT(AddressType ID, AddressType page);
-void removeFATPage(AddressType page);
 AddressType removeFromFAT(AddressType ID);
 AddressType searchFAT(AddressType ID);
 

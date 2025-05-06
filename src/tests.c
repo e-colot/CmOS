@@ -30,7 +30,7 @@ void createFiles(size_t* sizes, size_t count, FileInfo* fileInfos) {
         // Open file for writing
         FILE* file = fopen(filePath, "wb");
         if (!file) {
-            printf("Failed to create file %s\n", filePath);
+            printf("\033[31mFailed to create file %s\033[0m\n", filePath);
             continue;
         }
 
@@ -63,6 +63,11 @@ unsigned char setFiles(FileEntry* fileEntries, size_t* entriesLength, FileInfo* 
         for (size_t j = 3; j >= ADDRESSING_BYTES; j--) {
             ID.bytes[j] = 0;
         }
+        // check that the ID is not 0
+        if (ID.value == 0) {
+            i--;
+            continue;
+        }
         // check that the ID is not already used
         unsigned char valid = 1;
         for (size_t j = 0; j < *entriesLength; j++) {
@@ -77,15 +82,16 @@ unsigned char setFiles(FileEntry* fileEntries, size_t* entriesLength, FileInfo* 
         }
         // add the file to the disk
         size_t fileIndex = rand() % filesLength;
+        printf("    Adding file: %s with ID: %x...", files[fileIndex].fileName, ID.value);
         if (addFile(files[fileIndex].fileName, ID)) {
-            printf("Disk is full\n");
+            printf("\033[33m        Disk is full\033[0m\n");
             return 1;
         } else {
             // add the file to the entries
             fileEntries[*entriesLength].fileIndex = fileIndex;
             fileEntries[*entriesLength].ID = ID;
             *entriesLength = *entriesLength + 1;
-            printf("    Successfully added file: %s with ID: %x\n", files[fileIndex].fileName, ID.value);
+            printf("\033[32m        Success\033[0m\n");
         }
     }
 
@@ -97,17 +103,17 @@ unsigned char checkFile(FileEntry* fileEntries, size_t* entriesLength, FileInfo*
     // check if the files are correctly added
     printf("Checking files...\n");
     for (size_t i = 0; i < *entriesLength; i++) {
-        printf("    Checking file: %s with ID: %x\n", files[fileEntries[i].fileIndex].fileName, fileEntries[i].ID.value);
+        printf("    Checking file: %s with ID: %x...", files[fileEntries[i].fileIndex].fileName, fileEntries[i].ID.value);
         unsigned char* buffer = malloc(files[fileEntries[i].fileIndex].fileSize);
         if (loadFile(fileEntries[i].ID, buffer, files[fileEntries[i].fileIndex].fileSize)) {
-            printf("    Error loading file: %s\n", files[fileEntries[i].fileIndex].fileName);
+            printf("\033[31m\nError loading file: %s\033[0m\n", files[fileEntries[i].fileIndex].fileName);
             free(buffer);
             return 1;
         }
         // check whether the file was correctly added
         FILE* file = fopen(files[fileEntries[i].fileIndex].fileName, "rb");
         if (!file) {
-            printf("    Failed to open file: %s\n", files[fileEntries[i].fileIndex].fileName);
+            printf("\033[31m\nFailed to open file: %s\033[0m\n", files[fileEntries[i].fileIndex].fileName);
             free(buffer);
             return 1;
         }
@@ -119,6 +125,7 @@ unsigned char checkFile(FileEntry* fileEntries, size_t* entriesLength, FileInfo*
             fseek(file, randomIndex, SEEK_SET);
             fread(&randomByte, sizeof(unsigned char), 1, file);
             if (buffer[randomIndex] != randomByte) {
+                printf("\033[33m\nError reading byte %zu out of %zu bytes\033[0m\n", randomIndex, files[fileEntries[i].fileIndex].fileSize);
                 error = 1;
                 break;
             }
@@ -126,10 +133,10 @@ unsigned char checkFile(FileEntry* fileEntries, size_t* entriesLength, FileInfo*
         fclose(file);
         free(buffer);
         if (error) {
-            printf("    File not correctly written/read: %s\n", files[fileEntries[i].fileIndex].fileName);
+            printf("\033[31m\nFile not correctly written/read: %s\033[0m\n", files[fileEntries[i].fileIndex].fileName);
             return 1;
         }
-        printf("    File successfully verified: %s\n", files[fileEntries[i].fileIndex].fileName);
+        printf("\033[32m        Success\033[0m\n");
     }
     printf("All files successfully verified.\n\n");
     return 0;
@@ -143,14 +150,13 @@ unsigned char delFiles(FileEntry* fileEntries, size_t* entriesLength) {
     for (size_t i = 0; i < filesToDelete; i++) {
         // generate a random index
         size_t randomIndex = rand() % *entriesLength;
-        printf("    Attempting to delete file with ID: %x\n", fileEntries[randomIndex].ID.value);
+        printf("    Attempting to delete file with ID: %x...", fileEntries[randomIndex].ID.value);
 
         if (removeFile(fileEntries[randomIndex].ID)) {
-            printf("    Error removing file with ID: %x\n", fileEntries[randomIndex].ID.value);
+            printf("\033[31m\nError removing file with ID: %x\033[0m\n", fileEntries[randomIndex].ID.value);
             return 1;
         }
-
-        printf("    Successfully removed file with ID: %x\n", fileEntries[randomIndex].ID.value);
+        printf("\033[32m        Success\033[0m\n");
 
         // remove the file from the entries
         for (size_t j = randomIndex; j < *entriesLength - 1; j++) {
@@ -182,12 +188,8 @@ void runTest() {
     FileEntry* fileEntries = malloc(maxFileCnt*3/2 * sizeof(FileEntry));
 
     // add files to the disk 
-    if (setFiles(fileEntries, length, fileInfos, fileNbr)) {
-        printf("Error adding files\n");
-        free(fileEntries);
-        free(length);
-        return;
-    }
+    // No error catch as a disk full error can occur and has no impact on the test
+    setFiles(fileEntries, length, fileInfos, fileNbr);
 
     // remove files from the disk
     if (delFiles(fileEntries, length)) {
@@ -230,12 +232,8 @@ void runTest() {
     }
 
     // add files to the disk one more time
-    if (setFiles(fileEntries, length, fileInfos, fileNbr)) {
-        printf("Error adding files\n");
-        free(fileEntries);
-        free(length);
-        return;
-    }
+    // No error catch as a disk full error can occur and has no impact on the test
+    setFiles(fileEntries, length, fileInfos, fileNbr);
 
     // check if the files are correctly added
     if (checkFile(fileEntries, length, fileInfos)) {

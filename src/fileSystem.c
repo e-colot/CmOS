@@ -52,7 +52,7 @@ void setPage(AddressType pos, unsigned char* buffer) {
 AddressType getFreePage() {
     // get a free page in the bitmap
     // NOT in charge of modifying the bitmap
-    
+
     unsigned char* bitmap = malloc(BITMAP_SIZE);
     diskRead(0, bitmap, 0, BITMAP_SIZE);
 
@@ -151,50 +151,6 @@ size_t addToFAT(AddressType ID, AddressType page) {
     return 0;
 }
 
-void removeFATPage(AddressType pageIndex) {
-    // a bit overkill as it could handle a page in the middle being deleted even though it will
-    // only be called in the case of the last FAT page being deleted (if implemented as planned)
-    // it still will not remove the first FAT page (located at pageIndex = 2)
-    if (pageIndex.value == FAT_START) {
-        // by convention, the first FAT page is at address FAT_START -> cannot be deleted
-        return;
-    }
-    unsigned char* fat = malloc(PAGE_SIZE);
-    getPage(pageIndex, fat);
-
-    // store the first two addresses in FAT as they link to the previous and next FAT pages
-    AddressType previousIndex = getAddress(fat);
-    AddressType nextIndex = getAddress(fat + ADDRESSING_BYTES);
-
-    // checks the page is empty
-    for (size_t i = 2; (i+2)*ADDRESSING_BYTES <= PAGE_SIZE; i=i+2) {
-        if (!checkAddress((fat + i*ADDRESSING_BYTES), 0)) {
-            // the i-th entry is not empty
-            free(fat);
-            return;
-        }
-    }
-
-    if (previousIndex.value != 0) {
-        // if it was not the first FAT page
-        // load the previous FAT page
-        getPage(previousIndex, fat);
-        // set the next FAT page address to the one after the one that is being deleted
-        setAddress(fat + ADDRESSING_BYTES, nextIndex);
-        setPage(previousIndex, fat);
-    }
-    if (nextIndex.value != 0) {
-        // if it was not the last FAT page
-        // load the next FAT page
-        getPage(nextIndex, fat);
-        // set the previous FAT page address to the one before the one that is being deleted
-        setAddress(fat, previousIndex);
-        setPage(nextIndex, fat);
-    }
-    updateBitmap(pageIndex);
-    free(fat);
-}
-
 void reorganizeFAT() {
     // fills holes in the FAT with entries from the end of the FAT
 
@@ -254,28 +210,31 @@ void reorganizeFAT() {
             // both entries are valid
             AddressType ID = getAddress(upperFAT + upperPageEntry*ADDRESSING_BYTES);
             AddressType page = getAddress(upperFAT + upperPageEntry*ADDRESSING_BYTES + ADDRESSING_BYTES);
+            // update lower FAT page
             setAddress(lowerFAT + lowerPageEntry*ADDRESSING_BYTES, ID);
             setAddress(lowerFAT + lowerPageEntry*ADDRESSING_BYTES + ADDRESSING_BYTES, page);
+            setPage(lowerPageIndex, lowerFAT);
+            // update upper FAT page
             setAddress(upperFAT + upperPageEntry*ADDRESSING_BYTES, zero);
+            setPage(upperPageIndex, upperFAT);
         }
         if (valid%2 == 0) {
             // no empty entry found in the lower FAT page
-            // save the previous page
-            setPage(lowerPageIndex, lowerFAT);
             // go to the next FAT page
             lowerPageIndex = getAddress(lowerFAT + ADDRESSING_BYTES);
             getPage(lowerPageIndex, lowerFAT);
             lowerPageEntry = 2;
         }
-        if (valid <= 1) {
+        else if (valid <= 1) {
             // the upper FAT page is completely empty -> might be removed
+            // remove the page from the bitmap
             updateBitmap(upperPageIndex);
-
             // go to the previous FAT page
             upperPageIndex = getAddress(upperFAT);
             getPage(upperPageIndex, upperFAT);
-            // declare it as the last FAT page
+            // update the next FAT page address to 0 (last FAT page)
             setAddress(upperFAT + ADDRESSING_BYTES, zero);
+            setPage(upperPageIndex, upperFAT);
             upperPageEntry = 2;
         }
     }
@@ -409,7 +368,8 @@ size_t addFile(const char* filePath, AddressType ID) {
         close(file);
         return 1;
     }
-    size_t fileSize = fileStat.st_size;
+    // file size + 1 for the null terminator
+    size_t fileSize = fileStat.st_size + 1;
 
     // file setup
     lseek(file, 0, SEEK_SET);
@@ -473,8 +433,13 @@ size_t addFile(const char* filePath, AddressType ID) {
         setAddress(buffer, nextPage);
         size_t bytesRead = read(file, buffer + ADDRESSING_BYTES, PAGE_SIZE - ADDRESSING_BYTES);
         if (bytesRead < PAGE_SIZE - ADDRESSING_BYTES) {
+            // add a null terminator
+            buffer[ADDRESSING_BYTES + bytesRead] = 0x00;
             // fill the remaining buffer with 0xFF
-            memset(buffer + ADDRESSING_BYTES + bytesRead, 0xFF, PAGE_SIZE - ADDRESSING_BYTES - bytesRead);
+            memset(buffer + ADDRESSING_BYTES + bytesRead + 1, 0xFF, PAGE_SIZE - bytesRead - ADDRESSING_BYTES - 1);
+        }
+        else {
+            printf("Error: no space available for file terminator\n");
         }
         diskWrite(page.value*PAGE_SIZE, buffer, PAGE_SIZE);
     }
@@ -499,7 +464,7 @@ size_t loadFile(AddressType ID, unsigned char* dest, size_t len) {
     }
     size_t pagesNbr = getFileSize(ID);
 
-    if (len < pagesNbr*(PAGE_SIZE - ADDRESSING_BYTES)) {
+    if (len < (pagesNbr-1)*(PAGE_SIZE - ADDRESSING_BYTES)) {
         printf("Memory allocated to loadFile too small\n");
         return 1;
     }
@@ -508,12 +473,42 @@ size_t loadFile(AddressType ID, unsigned char* dest, size_t len) {
     unsigned char* pageBuffer = malloc(PAGE_SIZE);
     unsigned char* destPtr = dest;
     AddressType pageIndex = firstPageIndex;
-    for (size_t i = 0; i < pagesNbr; i++) {
+    for (size_t i = 0; i < pagesNbr-1; i++) {
         getPage(pageIndex, pageBuffer);
         for (size_t j = ADDRESSING_BYTES; j < PAGE_SIZE; j++) {
             *(destPtr++) = pageBuffer[j];
         }
         pageIndex = getAddress(pageBuffer);
+    }
+    // last page
+    getPage(pageIndex, pageBuffer);
+    unsigned char terminatorSeen = 0;
+    for (size_t j = PAGE_SIZE - 1; j >= ADDRESSING_BYTES; j--) {
+        if (pageBuffer[j] == 0xFF) {
+            // filling bytes
+            continue;
+        }
+        destPtr = dest + (pagesNbr-1)*(PAGE_SIZE - ADDRESSING_BYTES) + j - ADDRESSING_BYTES;
+        if (terminatorSeen == 0 && pageBuffer[j] == 0x00) {
+            // terminator found
+            terminatorSeen = 1;
+            // check for destination buffer length
+            if (destPtr > dest + len + ADDRESSING_BYTES) {
+                // destination buffer too small
+                printf("Memory allocated to loadFile too small\n");
+                free(pageBuffer);
+                return 1;
+            }
+            continue;
+        }
+        if (terminatorSeen == 0) {
+            // terminator not found 
+            printf("Error: file terminator not found\n");
+            free(pageBuffer);
+            return 1;
+        }
+        // copy the byte to the destination buffer
+        *destPtr = pageBuffer[j];
     }
     free(pageBuffer);
     return 0;
@@ -529,7 +524,6 @@ size_t removeFile(AddressType ID) {
     AddressType index = removeFromFAT(ID);
     if (index.value == 0) {
         // file not found in FAT
-        printf("Trying to remove a non-existing file\n");
         return 1;
     }
     unsigned char* buffer = malloc(PAGE_SIZE);

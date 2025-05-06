@@ -16,7 +16,7 @@ Computer* boot() {
     if (!seedInitialized) {
         size_t seed = time(NULL);
         //DEBUG
-        seed = 1746556195;
+        //seed = 1746567762;
         printf("Seed: %zu\n\n", seed);
         srand(seed);
         seedInitialized = 1;
