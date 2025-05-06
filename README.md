@@ -14,13 +14,11 @@
     - [x] Adding files
     - [x] Removing Files
     - [x] Inserting files in holes
-    - [ ] Update FAT tests
-    - [ ] File displacement
-    - [ ] Disk defragmentation
+    - [x] Disk defragmentation
+    - [x] Update FAT tests
+    - [ ] File displacement (optional)
 
 # Known issues
-
-reorganizeFAT not working for a single FAT page ??
 
 # Small things to do
 

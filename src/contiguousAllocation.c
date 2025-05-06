@@ -224,9 +224,53 @@ CA_FATEntry CA_searchFAT(AddressType ID) {
 
 
 size_t diskDefragmentation() {
-    //TODO
-    printf("Defragmentation not implemented\n");
-    return 1;
+    // cycles through each entry and put it back as close as possible to the last one
+    AddressType zero = {0};
+    CA_FATEntry FATinfo = CA_getFATEntry(zero);
+
+    AddressType lastAddress;
+    lastAddress.value = DISK_SIZE/PAGE_SIZE;
+
+    for (size_t i = 1; i <= FATinfo.length.value; i++) {
+        AddressType index;
+        index.value = i;
+        CA_FATEntry currentEntry = CA_getFATEntry(index);
+        // check if there is indeed space
+        if (currentEntry.page.value + currentEntry.length.value == lastAddress.value) {
+            // already spacd as it should, nothing must be done
+            lastAddress = currentEntry.page;
+            continue;
+        }
+        else if (currentEntry.page.value + currentEntry.length.value > lastAddress.value) {
+            // file must go back, should NEVER happen
+            printf("Corrupted FAT entries\n");
+            return 1;
+        }
+        else {
+            // the file must be moved
+
+            // load the file
+            unsigned char* buffer = malloc(PAGE_SIZE * currentEntry.length.value);
+            CA_loadFile(currentEntry.ID, buffer, PAGE_SIZE * currentEntry.length.value);
+
+            // change its address in FAT
+            currentEntry.page.value = lastAddress.value - currentEntry.length.value;
+            CA_setFATEntry(index, currentEntry);
+
+            // add the file to disk
+            size_t destination = currentEntry.page.value * PAGE_SIZE;
+            for (size_t i = 0; i < currentEntry.length.value; i++) {
+                // write the buffer to the disk
+                diskWrite(destination, buffer+i*PAGE_SIZE, PAGE_SIZE);
+                // update the destination
+                destination += PAGE_SIZE;
+            }
+            free(buffer);
+
+            lastAddress = currentEntry.page;
+        }
+    }
+    return 0;
 }
 
 

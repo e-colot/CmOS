@@ -1,8 +1,8 @@
 #pragma once
 
 #define RAM_SIZE 256
-#define DISK_SIZE 512
-#define PAGE_SIZE 16
+#define DISK_SIZE 1024*1024
+#define PAGE_SIZE 256
 #define FILE_ALLOCATION 0 // 0 = bitmap + FAT, 1 = Contiguous Allocation
 #define MAX_PROCESSES 16
 
@@ -24,5 +24,6 @@
 
 
 // TESTS PARAMETERS
-#define TEST_FILE_NBR 3
-#define TEST_FILE_SIZE 20
+#define TEST_FILE_NBR 30
+#define TEST_FILE_SIZE 200
+#define MAX_MIN_ITR 5

@@ -67,6 +67,9 @@ void diskWrite(size_t diskPos, unsigned char* data, size_t len) {
         write(disk, data, len);
         close(disk);
     }
+    else {
+        printf("Error: Attempt to write beyond disk size\n");
+    }
 }
 
 void diskRead(size_t diskPos, unsigned char* mem, size_t memPos, size_t len) {

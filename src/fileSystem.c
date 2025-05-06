@@ -207,19 +207,26 @@ void reorganizeFAT() {
     // fills holes in the FAT with entries from the end of the FAT
 
     // load the first and last FAT pages
-    AddressType lowerPageIndex, upperPageIndex;
+    AddressType lowerPageIndex, upperPageIndex, tmp;
     lowerPageIndex.value = FAT_START;
     upperPageIndex.value = FAT_START;
     unsigned char* lowerFAT = malloc(PAGE_SIZE);
     unsigned char* upperFAT = malloc(PAGE_SIZE);
     getPage(lowerPageIndex, lowerFAT);
     getPage(upperPageIndex, upperFAT);
+
     while (upperPageIndex.value) {
         // interpret it as "while the next FAT page is not 0",
         // which would indicate it was the last FAT page
         getPage(upperPageIndex, upperFAT);
+        // save upperPageIndex as the index of the current entry in upperFAT
+        tmp = upperPageIndex;
+
         upperPageIndex = getAddress(upperFAT + ADDRESSING_BYTES);
     }
+
+    // update the last FAT page address
+    upperPageIndex = tmp;
 
     size_t lowerPageEntry = 2; // index of the current entry in the lower FAT page
     size_t upperPageEntry = 2; // index of the current entry in the upper FAT page

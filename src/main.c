@@ -19,14 +19,8 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
-    if(multipleWriteEraseTest(100) == 1) {
-        printf("Error in multiple write/erase test\n");
-        shutdown(computer);
-        return 1;
-    }
-    else {
-        printf("Multiple write/erase test succeeded\n");
-    }
+    multipleWriteEraseTest(MAX_MIN_ITR);
+    diskDefragmentation();
 
     printf("FAT:\n");
     printFAT();
