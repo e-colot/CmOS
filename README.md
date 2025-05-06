@@ -1,6 +1,5 @@
 # TODO
 
-- Implement a contiguous allocation mode
 - Make a complete test (mix of write, erase, read)
 - Measure impact of page size
 - Compare type of file storage
@@ -8,17 +7,12 @@
 - implement different process management algorithms
 - compare process management algorithms
 - revisit ISA
-## Contiguous allocation
-    - [x] disk init 
-    - [x] FAT setup
-    - [x] Adding files
-    - [x] Removing Files
-    - [x] Inserting files in holes
-    - [x] Disk defragmentation
-    - [x] Update FAT tests
-    - [ ] File displacement (optional)
 
 # Known issues
+
+File terminator:
+    when putting a file in disk (no matter which storage method used), it is filled with ```0xFF``` until the end of the used page. This leads to error when reading the file
+    Needs to update ```addFile``` and ```loadFile```
 
 # Small things to do
 

@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <string.h>
 #include <stdlib.h>
 
 #include "devTools.h"
@@ -10,15 +11,249 @@
 #include "contiguousAllocation.h"
 #include "disk.h"
 
-unsigned char writeTest(size_t fileNbr, size_t fileSize) {
-    
-    // randomness initialization
-    static int seedInitialized = 0;
-    if (!seedInitialized) {
-        srand(time(NULL));
-        seedInitialized = 1;
+typedef struct {
+    char* fileName;
+    size_t fileSize;
+} FileInfo;
+
+typedef struct {
+    unsigned char fileIndex;
+    AddressType ID;
+} FileEntry;
+
+void createFiles(size_t* sizes, size_t count, FileInfo* fileInfos) {
+    for (size_t i = 0; i < count; i++) {
+        // Generate file name
+        char filePath[50];
+        snprintf(filePath, sizeof(filePath), "../programs/bin/file%zu", i + 1);
+
+        // Open file for writing
+        FILE* file = fopen(filePath, "wb");
+        if (!file) {
+            printf("Failed to create file %s\n", filePath);
+            continue;
+        }
+
+        // Write random content of size * PAGE_SIZE
+        size_t fileSize = sizes[i] * PAGE_SIZE;
+        for (size_t j = 0; j < fileSize; j++) {
+            unsigned char randomByte = rand() % 0xFF;
+            fwrite(&randomByte, sizeof(unsigned char), 1, file);
+        }
+        fclose(file);
+
+        // Store file information
+        fileInfos[i].fileName = strdup(filePath);
+        fileInfos[i].fileSize = fileSize;
+    }
+}
+
+unsigned char setFiles(FileEntry* fileEntries, size_t* entriesLength, FileInfo* files, size_t filesLength) {
+    // adds a random number of files to the disk
+    // return 0 if the disk is full (if addFile failed)
+    size_t filesAdded = (rand() % 20) + 5;
+
+    printf("Attempting to add %zu files to the disk...\n", filesAdded);
+
+    for (size_t i = 0; i < filesAdded; i++) {
+        // generate an ID
+        AddressType ID;
+        ID.value = rand() % 0xFFFFFFFF;
+        // set to 0 the bytes that are not used for addressing
+        for (size_t j = 3; j >= ADDRESSING_BYTES; j--) {
+            ID.bytes[j] = 0;
+        }
+        // check that the ID is not already used
+        unsigned char valid = 1;
+        for (size_t j = 0; j < *entriesLength; j++) {
+            if (ID.value == (fileEntries + j)->ID.value) {
+                valid = 0;
+                i--;
+                break;
+            }
+        }
+        if (!valid) {
+            continue;
+        }
+        // add the file to the disk
+        size_t fileIndex = rand() % filesLength;
+        if (addFile(files[fileIndex].fileName, ID)) {
+            printf("Disk is full\n");
+            return 1;
+        } else {
+            // add the file to the entries
+            fileEntries[*entriesLength].fileIndex = fileIndex;
+            fileEntries[*entriesLength].ID = ID;
+            *entriesLength = *entriesLength + 1;
+            printf("    Successfully added file: %s with ID: %x\n", files[fileIndex].fileName, ID.value);
+        }
     }
 
+    printf("Successfully added %zu files to the disk.\n\n", filesAdded);
+    return 0;
+}
+
+unsigned char checkFile(FileEntry* fileEntries, size_t* entriesLength, FileInfo* files) {
+    // check if the files are correctly added
+    printf("Checking files...\n");
+    for (size_t i = 0; i < *entriesLength; i++) {
+        printf("    Checking file: %s with ID: %x\n", files[fileEntries[i].fileIndex].fileName, fileEntries[i].ID.value);
+        unsigned char* buffer = malloc(files[fileEntries[i].fileIndex].fileSize);
+        if (loadFile(fileEntries[i].ID, buffer, files[fileEntries[i].fileIndex].fileSize)) {
+            printf("    Error loading file: %s\n", files[fileEntries[i].fileIndex].fileName);
+            free(buffer);
+            return 1;
+        }
+        // check whether the file was correctly added
+        FILE* file = fopen(files[fileEntries[i].fileIndex].fileName, "rb");
+        if (!file) {
+            printf("    Failed to open file: %s\n", files[fileEntries[i].fileIndex].fileName);
+            free(buffer);
+            return 1;
+        }
+        // read 10 random bytes from the file and check if they are the same
+        unsigned char error = 0;
+        for (size_t j = 0; j < 10; j++) {
+            size_t randomIndex = rand() % files[fileEntries[i].fileIndex].fileSize;
+            unsigned char randomByte;
+            fseek(file, randomIndex, SEEK_SET);
+            fread(&randomByte, sizeof(unsigned char), 1, file);
+            if (buffer[randomIndex] != randomByte) {
+                error = 1;
+                break;
+            }
+        }
+        fclose(file);
+        free(buffer);
+        if (error) {
+            printf("    File not correctly written/read: %s\n", files[fileEntries[i].fileIndex].fileName);
+            return 1;
+        }
+        printf("    File successfully verified: %s\n", files[fileEntries[i].fileIndex].fileName);
+    }
+    printf("All files successfully verified.\n\n");
+    return 0;
+}
+
+unsigned char delFiles(FileEntry* fileEntries, size_t* entriesLength) {
+    // delete a random number of files
+    size_t filesToDelete = rand() % *entriesLength;
+    printf("Attempting to delete %zu files...\n", filesToDelete);
+
+    for (size_t i = 0; i < filesToDelete; i++) {
+        // generate a random index
+        size_t randomIndex = rand() % *entriesLength;
+        printf("    Attempting to delete file with ID: %x\n", fileEntries[randomIndex].ID.value);
+
+        if (removeFile(fileEntries[randomIndex].ID)) {
+            printf("    Error removing file with ID: %x\n", fileEntries[randomIndex].ID.value);
+            return 1;
+        }
+
+        printf("    Successfully removed file with ID: %x\n", fileEntries[randomIndex].ID.value);
+
+        // remove the file from the entries
+        for (size_t j = randomIndex; j < *entriesLength - 1; j++) {
+            fileEntries[j] = fileEntries[j + 1];
+        }
+        *entriesLength = *entriesLength - 1;
+    }
+
+    printf("Successfully deleted %zu files.\n\n", filesToDelete);
+    return 0;
+}
+
+void runTest() {
+
+    // file creation
+    size_t fileNbr = 5;
+    // means that there will never be more than 100 files
+    size_t maxFileCnt = 100;
+    size_t minFileSize = DISK_SIZE/(maxFileCnt*PAGE_SIZE);
+    size_t fileSizes[fileNbr];
+    for (size_t i = 0; i < 5; i++) {
+        fileSizes[i] = minFileSize + i;
+    }
+    FileInfo fileInfos[fileNbr];
+    createFiles(fileSizes, fileNbr, fileInfos);
+
+    size_t* length = malloc(sizeof(size_t));
+    *length = 0;
+    FileEntry* fileEntries = malloc(maxFileCnt*3/2 * sizeof(FileEntry));
+
+    // add files to the disk 
+    if (setFiles(fileEntries, length, fileInfos, fileNbr)) {
+        printf("Error adding files\n");
+        free(fileEntries);
+        free(length);
+        return;
+    }
+
+    // remove files from the disk
+    if (delFiles(fileEntries, length)) {
+        printf("Error removing files\n");
+        free(fileEntries);
+        free(length);
+        return;
+    }
+
+    // check if the files are correctly added
+    if (checkFile(fileEntries, length, fileInfos)) {
+        printf("Error checking files\n");
+        free(fileEntries);
+        free(length);
+        return;
+    }
+
+    // fill the disk
+    while (1) {
+        if (setFiles(fileEntries, length, fileInfos, fileNbr)) {
+            // disk is full
+            break;
+        }
+    }
+
+    //check again
+    if (checkFile(fileEntries, length, fileInfos)) {
+        printf("Error checking files\n");
+        free(fileEntries);
+        free(length);
+        return;
+    }
+
+    // remove files from the disk
+    if (delFiles(fileEntries, length)) {
+        printf("Error removing files\n");
+        free(fileEntries);
+        free(length);
+        return;
+    }
+
+    // add files to the disk one more time
+    if (setFiles(fileEntries, length, fileInfos, fileNbr)) {
+        printf("Error adding files\n");
+        free(fileEntries);
+        free(length);
+        return;
+    }
+
+    // check if the files are correctly added
+    if (checkFile(fileEntries, length, fileInfos)) {
+        printf("Error checking files\n");
+        free(fileEntries);
+        free(length);
+        return;
+    }
+
+    // if no error, print success message
+    printf("All tests passed\n");
+
+}
+
+//-------------------------------------------------------------------------------------------------
+
+unsigned char writeTest(size_t fileNbr, size_t fileSize) {
+    
     // file creation
     unsigned char* fileContent = malloc(fileSize);
     FILE *file = fopen("../programs/bin/randomFile", "wb");
@@ -99,13 +334,6 @@ unsigned char writeTest(size_t fileNbr, size_t fileSize) {
 }
 
 unsigned char eraseTest(size_t fileNbr, size_t fileSize) {
-    // randomness initialization
-    static int seedInitialized = 0;
-    if (!seedInitialized) {
-        srand(time(NULL));
-        seedInitialized = 1;
-    }
-
     // file creation
     FILE *file = fopen("../programs/bin/randomFile", "wb");
     if (!file) {
@@ -172,14 +400,6 @@ unsigned char eraseTest(size_t fileNbr, size_t fileSize) {
 }
 
 unsigned char multipleWriteEraseTest(size_t maxMinItr) {
-    // randomness initialization
-    static int seedInitialized = 0;
-    if (!seedInitialized) {
-        unsigned int seed = time(NULL);
-        srand(seed);
-        seedInitialized = 1;
-    }
-
     // Create multiple files of varying sizes
     // Create 5 files with sizes as multiples of (PAGE_SIZE - ADDRESSING_BYTES)
     char filePaths[5][30];

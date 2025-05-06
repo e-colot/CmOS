@@ -19,11 +19,7 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
-    multipleWriteEraseTest(MAX_MIN_ITR);
-    diskDefragmentation();
-
-    printf("FAT:\n");
-    printFAT();
+    runTest();
 
     shutdown(computer);
     return 0;

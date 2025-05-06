@@ -52,15 +52,7 @@ void setPage(AddressType pos, unsigned char* buffer) {
 AddressType getFreePage() {
     // get a free page in the bitmap
     // NOT in charge of modifying the bitmap
-
-    // far from optimal due to random page selection
-    // implies a variable execution time
-    static int seedInitialized = 0;
-    if (!seedInitialized) {
-        unsigned int seed = time(NULL);
-        srand(seed);
-        seedInitialized = 1;
-    }
+    
     unsigned char* bitmap = malloc(BITMAP_SIZE);
     diskRead(0, bitmap, 0, BITMAP_SIZE);
 
@@ -299,6 +291,14 @@ void reorganizeFAT() {
 
 AddressType removeFromFAT(AddressType ID) {
 
+    // a FAT reorganization is done each time PAGE_SIZE/(2*ADDRESSING_BYTES) files are removed
+    static size_t count = 0;
+    if (count == PAGE_SIZE/(2*ADDRESSING_BYTES)) {
+        reorganizeFAT();
+        count = 0;
+    }
+    count++;
+
     // remove the file from the FAT and return the first page address
     unsigned char* fat = malloc(PAGE_SIZE);
     AddressType pageIndex;
@@ -318,7 +318,6 @@ AddressType removeFromFAT(AddressType ID) {
 
                 setPage(pageIndex, fat);
                 free(fat);
-                removeFATPage(pageIndex); // will remove the FAT page if it is empty
                 return ret;
             }
         }

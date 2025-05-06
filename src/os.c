@@ -11,6 +11,17 @@
 #include "processManagement.h"
 
 Computer* boot() {
+
+    static int seedInitialized = 0;
+    if (!seedInitialized) {
+        size_t seed = time(NULL);
+        //DEBUG
+        seed = 1746556195;
+        printf("Seed: %zu\n\n", seed);
+        srand(seed);
+        seedInitialized = 1;
+    }
+
     diskInit(DISK_SIZE);
 
     Computer* comp = malloc(sizeof(Computer));
