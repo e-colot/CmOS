@@ -14,7 +14,7 @@ int main(int argc, char* argv[]) {
 
     // Check if the program is run in test mode
     if (argc > 1 && strcmp(argv[1], "--test") == 0) {
-        runTests();
+        runTest();
         shutdown(computer);
         return 0;
     }

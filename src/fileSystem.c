@@ -57,8 +57,8 @@ AddressType getFreePage() {
     diskRead(0, bitmap, 0, BITMAP_SIZE);
 
     char full = 1;
-    for (size_t i = 0; i < BITMAP_SIZE; i++) {
-        if (bitmap[i] != (unsigned char)0xFF) {
+    for (size_t i = 0; i < (DISK_SIZE / PAGE_SIZE); i++) {
+        if (!(bitmap[i / 8] & (0b1 << (7 - (i % 8))))) {
             full = 0;
             break;
         }

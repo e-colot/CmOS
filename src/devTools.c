@@ -115,3 +115,9 @@ void printFAT() {
 
     }
 }
+
+void printAddress(AddressType address) {
+    for (size_t i = 0; i < ADDRESSING_BYTES; i++) {
+        printf("%02X", address.bytes[i]);
+    }
+}

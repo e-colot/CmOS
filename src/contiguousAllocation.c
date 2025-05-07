@@ -29,6 +29,9 @@ AddressType CA_addToFAT(CA_FATEntry entry) {
     // if it doesn't fit, try finding a sufficiently large free space
     // if not found, defragment the disk and try again
 
+    // to avoid more than 1 recursive call
+    static size_t recursiveCount = 0;
+
     AddressType zero = {0};
     CA_FATEntry FATinfo = CA_getFATEntry(zero);
     CA_FATEntry lastEntry = CA_getFATEntry(FATinfo.length);
@@ -93,8 +96,17 @@ AddressType CA_addToFAT(CA_FATEntry entry) {
         if (futureFATpageNbr > firstFilePage) {
             // FAT page would overflow on the last file
             // defragmentation needed
-            diskDefragmentation();
-            return zero;
+
+            // need to recursively add the same file because after defragmentation, some disk space
+            // might be freed at the beginning of the disk
+            AddressType newTry = {0};
+            if (recursiveCount == 0) {
+                recursiveCount = 1;
+                diskDefragmentation();
+                newTry = CA_addToFAT(entry);
+                recursiveCount = 0;
+            }
+            return newTry;
         }
 
         CA_FATEntry entryToCheck, nextEntry;
@@ -251,7 +263,8 @@ size_t diskDefragmentation() {
 
             // load the file
             unsigned char* buffer = malloc(PAGE_SIZE * currentEntry.length.value);
-            CA_loadFile(currentEntry.ID, buffer, PAGE_SIZE * currentEntry.length.value);
+            // read the file into the buffer
+            diskRead(currentEntry.page.value * PAGE_SIZE, buffer, 0, PAGE_SIZE * currentEntry.length.value);
 
             // change its address in FAT
             currentEntry.page.value = lastAddress.value - currentEntry.length.value;
@@ -298,7 +311,8 @@ size_t CA_addFile(const char* filePath, AddressType ID) {
         close(file);
         return 1;
     }
-    size_t fileSize = fileStat.st_size;
+    // + 1 to account for the terminator
+    size_t fileSize = fileStat.st_size + 1;
 
     // file setup
     lseek(file, 0, SEEK_SET);
@@ -325,8 +339,10 @@ size_t CA_addFile(const char* filePath, AddressType ID) {
         // read the file into the buffer
         bytesRead = read(file, buffer, PAGE_SIZE);
         if (bytesRead < PAGE_SIZE) {
+            // add a terminator
+            buffer[bytesRead] = 0x00;
             // fill the remaining buffer with 0xFF
-            memset(buffer + bytesRead, 0xFF, PAGE_SIZE - bytesRead);
+            memset(buffer + bytesRead + 1, 0xFF, PAGE_SIZE - bytesRead - 1);
         }
         // write the buffer to the disk
         diskWrite(destination, buffer, PAGE_SIZE);
@@ -346,19 +362,42 @@ size_t CA_loadFile(AddressType ID, unsigned char* mem, size_t len) {
         return 1;
     }
     // check if the memory is large enough
-    if (len < location.length.value*PAGE_SIZE) {
+    if (len < (location.length.value-1)*PAGE_SIZE) {
         printf("Memory allocated to loadFile too small\n");
         return 1;
     }
     // load the file
     unsigned char* buffer = malloc(PAGE_SIZE);
-    for (size_t i = 0; i < location.length.value; i++) {
+    for (size_t i = 0; i < location.length.value-1; i++) {
         // read the page into the buffer
         diskRead(location.page.value*PAGE_SIZE, buffer, 0, PAGE_SIZE);
         // copy the buffer to the memory
         memcpy(mem + i*PAGE_SIZE, buffer, PAGE_SIZE);
         // update the page
         location.page.value++;
+    }
+    // last page
+    diskRead(location.page.value*PAGE_SIZE, buffer, 0, PAGE_SIZE);
+    unsigned char terminatorSeen = 0;
+    for (size_t i = PAGE_SIZE-1; i != 0xFFFFFFFF; i--) {
+        if (buffer[i] == 0xFF) {
+            // filling bytes
+            continue;
+        }
+        if (terminatorSeen == 0 && buffer[i] == 0x00) {
+            // terminator found
+            terminatorSeen = 1;
+            // check for destination buffer length
+            if ((location.length.value-1)*PAGE_SIZE + i > len) {
+                printf("Memory allocated to loadFile too small\n");
+                free(buffer);
+                return 1;
+            }
+            continue;
+        }
+        // copy the buffer to the memory (up to the terminator)
+        memcpy(mem + (location.length.value-1)*PAGE_SIZE, buffer, i+1);
+        break;
     }
     free(buffer);
     return 0;
