@@ -7,6 +7,8 @@
 #include "tests.h"
 #include "fileSystem.h"
 #include "contiguousAllocation.h"
+#include "measurements.h"
+
 
 int main(int argc, char* argv[]) {    
     
@@ -19,7 +21,7 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
-    runTest();
+    timeToFillDisk("../measurements/data/fill512", 50, 0);
 
     shutdown(computer);
     return 0;

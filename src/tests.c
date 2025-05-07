@@ -10,43 +10,8 @@
 #include "fileSystem.h"
 #include "contiguousAllocation.h"
 #include "disk.h"
+#include "measurements.h"
 
-typedef struct {
-    char* fileName;
-    size_t fileSize;
-} FileInfo;
-
-typedef struct {
-    unsigned char fileIndex;
-    AddressType ID;
-} FileEntry;
-
-void createFiles(size_t* sizes, size_t count, FileInfo* fileInfos) {
-    for (size_t i = 0; i < count; i++) {
-        // Generate file name
-        char filePath[50];
-        snprintf(filePath, sizeof(filePath), "../programs/bin/file%zu", i + 1);
-
-        // Open file for writing
-        FILE* file = fopen(filePath, "wb");
-        if (!file) {
-            printf("\033[31mFailed to create file %s\033[0m\n", filePath);
-            continue;
-        }
-
-        // Write random content
-        size_t fileSize = sizes[i];
-        for (size_t j = 0; j < fileSize; j++) {
-            unsigned char randomByte = rand() % 0xFF;
-            fwrite(&randomByte, sizeof(unsigned char), 1, file);
-        }
-        fclose(file);
-
-        // Store file information
-        fileInfos[i].fileName = strdup(filePath);
-        fileInfos[i].fileSize = fileSize;
-    }
-}
 
 unsigned char setFiles(FileEntry* fileEntries, size_t* entriesLength, FileInfo* files, size_t filesLength) {
     // adds a random number of files to the disk
@@ -79,10 +44,6 @@ unsigned char setFiles(FileEntry* fileEntries, size_t* entriesLength, FileInfo* 
         }
         if (!valid) {
             continue;
-        }
-        //DEBUG
-        if (ID.value == 0x6C) {
-            printf("DEBUG\n");
         }
         // add the file to the disk
         size_t fileIndex = rand() % filesLength;
@@ -153,9 +114,9 @@ unsigned char checkFile(FileEntry* fileEntries, size_t* entriesLength, FileInfo*
             fseek(file, randomIndex, SEEK_SET);
             fread(&randomByte, sizeof(unsigned char), 1, file);
             if (buffer[randomIndex] != randomByte) {
-            printf("\033[33m\nError reading byte %zu out of %zu bytes\033[0m\n", randomIndex, files[fileEntries[i].fileIndex].fileSize);
-            error = 1;
-            break;
+                printf("\033[33m\nError reading byte %zu out of %zu bytes\033[0m\n", randomIndex, files[fileEntries[i].fileIndex].fileSize);
+                error = 1;
+                break;
             }
         }
         fclose(file);
