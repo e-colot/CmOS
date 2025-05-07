@@ -3,7 +3,7 @@
 #define RAM_SIZE 256
 #define DISK_SIZE 4*1024
 #define PAGE_SIZE 16
-#define FILE_ALLOCATION 1 // 0 = bitmap + FAT, 1 = Contiguous Allocation
+#define FILE_ALLOCATION 0 // 0 = bitmap + FAT, 1 = Contiguous Allocation
 #define MAX_PROCESSES 16
 
 #define BITMAP_SIZE ((DISK_SIZE + (8 * PAGE_SIZE) - 1) / (8 * PAGE_SIZE))  // number of bytes in the bitmap, ceiled

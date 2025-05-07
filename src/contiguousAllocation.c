@@ -232,6 +232,13 @@ CA_FATEntry CA_searchFAT(AddressType ID) {
     return FATinfo;
 }
 
+size_t CA_getFATsize() {
+    // returns the number of entries in the FAT
+    AddressType zero = {0};
+    CA_FATEntry FATinfo = CA_getFATEntry(zero);
+    return FATinfo.length.value;
+}
+
 
 
 

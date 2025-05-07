@@ -324,6 +324,37 @@ AddressType searchFAT(AddressType ID) {
     return page;
 }
 
+size_t getFATsize() {
+
+    if (FILE_ALLOCATION == 1) {
+        // file allocation is done with contiguous allocation
+        return CA_getFATsize();
+    }
+
+    // returns the number of entries in the FAT
+    unsigned char* fat = malloc(PAGE_SIZE);
+
+    AddressType pageIndex;
+    pageIndex.value = FAT_START;
+    size_t entriesNbr = 0;
+
+    while (pageIndex.value) {
+        // interpret it as "while the next FAT page is not 0",
+        // which would indicate it was the last FAT page
+        getPage(pageIndex, fat);
+        for (size_t i = 2; (i+2)*ADDRESSING_BYTES <= PAGE_SIZE; i=i+2) {
+            if (!checkAddress((fat + i*ADDRESSING_BYTES), 0)) {
+                // the i-th entry is not empty
+                entriesNbr++;
+            }
+        }
+        pageIndex = getAddress(fat + ADDRESSING_BYTES);
+    }
+
+    free(fat);
+    return entriesNbr;
+}
+
 size_t getFileSize(AddressType ID) {
     AddressType pageIndex = searchFAT(ID);
     if (pageIndex.value == 0) {

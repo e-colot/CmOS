@@ -195,6 +195,12 @@ unsigned char delFiles(FileEntry* fileEntries, size_t* entriesLength) {
         *entriesLength = *entriesLength - 1;
     }
 
+    size_t FATsize = getFATsize();
+    if (FATsize != *entriesLength) {
+        printf("\033[31mError: FAT size is not equal to the number of files\033[0m\n");
+        return 1;
+    }
+
     printf("Successfully deleted %zu files.\n\n", filesToDelete);
     return 0;
 }

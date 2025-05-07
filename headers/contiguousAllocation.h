@@ -18,6 +18,7 @@ void CA_removeFromFAT(AddressType index);
 CA_FATEntry CA_getFATEntry(AddressType location);
 void CA_setFATEntry(AddressType location, CA_FATEntry entry);
 CA_FATEntry CA_searchFAT(AddressType ID);
+size_t CA_getFATsize();
 
 size_t diskDefragmentation();
 

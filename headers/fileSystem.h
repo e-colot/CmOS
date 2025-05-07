@@ -23,6 +23,7 @@ void updateBitmap(AddressType page);
 size_t addToFAT(AddressType ID, AddressType page);
 AddressType removeFromFAT(AddressType ID);
 AddressType searchFAT(AddressType ID);
+size_t getFATsize();
 
 void reorganizeFAT();
 size_t getFileSize(AddressType ID);
