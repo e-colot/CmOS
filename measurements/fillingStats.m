@@ -1,4 +1,4 @@
-clear; close all; clc;
+clear; clc;
 
 sizes = 2.^(4:9);
 

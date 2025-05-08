@@ -27,9 +27,7 @@ function [info, data] = loadData(filePath, infoLength)
             error('The remaining bytes are not a multiple of 8, cannot interpret as double.');
         end
         data = typecast(fileBytes(8*infoLength+1:end), 'double');
-        
-        % Display success message
-        disp('File bytes loaded successfully.');
+     
     catch ME
         % Handle errors and display the error message
         error(['Error: ', ME.message]);
