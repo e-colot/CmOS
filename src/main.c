@@ -21,7 +21,14 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
-    timeToFillDisk("../measurements/data/fill512", 50, 0);
+
+    char filePath[256];
+    if (FILE_ALLOCATION == 0) {
+        snprintf(filePath, sizeof(filePath), "../measurements/data/fill%d", PAGE_SIZE);
+    } else {
+        snprintf(filePath, sizeof(filePath), "../measurements/data/fillCA%d", PAGE_SIZE);
+    }
+    timeToFillDisk("toDelete", 1, 0);
 
     shutdown(computer);
     return 0;

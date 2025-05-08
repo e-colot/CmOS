@@ -181,6 +181,7 @@ unsigned char timeToFillDisk(const char* fileName, size_t itr, unsigned char cre
             if (stat(filePath, &st) == 0) {
                 fileInfos[i].fileSize = st.st_size;
                 avgFileSize += fileInfos[i].fileSize;
+                printf("        File %zu: %s, size: %zu bytes\n", i + 1, fileInfos[i].fileName, fileInfos[i].fileSize);
             } 
             else {
                 printf("\033[31m        Error: Unable to get file size for %s\033[0m\n", filePath);
@@ -188,8 +189,9 @@ unsigned char timeToFillDisk(const char* fileName, size_t itr, unsigned char cre
                 free(fileBuffer);
                 return 1;
             }
-            avgFileSize /= fileNbr;
         }
+        avgFileSize /= fileNbr;
+        printf("        Average file size: %zu bytes\n", avgFileSize);
         printf("\033[32m        Success\033[0m\n");
     }
     // write the avg file size to the file
