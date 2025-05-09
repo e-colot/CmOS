@@ -57,9 +57,9 @@ legend('show');
 grid on;
 
 yyaxis right;
-semilogx(sizes, 100-avgDiskUsage, '-', 'Color', [0 0.4470 0.7410], 'DisplayName', 'Efficiency % (Linked allocation)', 'LineWidth', 1.5);
+semilogx(sizes, avgDiskUsage, '-', 'Color', [0 0.4470 0.7410], 'DisplayName', 'Efficiency % (Linked allocation)', 'LineWidth', 1.5);
 hold on;
-semilogx(sizes, 100-avgDiskUsageCA, '-', 'Color', [0.8500 0.3250 0.0980], 'DisplayName', 'Efficiency % (Contiguous allocation)', 'LineWidth', 1.5);
+semilogx(sizes, avgDiskUsageCA, '-', 'Color', [0.8500 0.3250 0.0980], 'DisplayName', 'Efficiency % (Contiguous allocation)', 'LineWidth', 1.5);
 ylabel('Storage efficiency (%)');
 xlim([min(sizes) max(sizes)]);
 xticks(sizes); % Set x-axis ticks to only show the values in sizes
