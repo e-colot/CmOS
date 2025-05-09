@@ -98,12 +98,26 @@ As described in section \ref{sec:paging}, both file systems will use paging to s
 For the sake of simplicity, the two systems will not implement folders. This is a choice that is often made for small size operating systems such as for RTOS\footnote{Real Time Operating System}.
 \subsection{Addressing bytes}
 The disk is split into pages of a fixed size but when trying to write or read a page, there must be a way of pointing to it. Because the disk size and the page size are parameters, one can not assume a single byte address will be enough to address all the pages. \\
-A disk of 256 kB with a page size of 256 bytes will have 1024 pages and a single byte address can only go up to 255. This means that a single byte address will not be enough to address all the pages. This is why the number of bytes used to address a page, referred to as \textbf{addressing bytes}, is variable and is computed as follows:
-
+A disk of 256 kB with a page size of 256 bytes will have 1024 pages and a single byte address can only go up to 255. This means that a single byte address will not be enough to address all the pages. This is why the number of bytes used to address a page, referred to as \textbf{addressing bytes} or $A_b$, is variable and is computed as follows:
+\begin{equation*}
+    A_b = \lceil \log_2\left(\frac{\text{disk size}}{\text{page size}}\right) \rceil
+\end{equation*}
+The complexity of addressing with a variable number of bytes is that, depending on the dimensions of the disk and the page size, the place needed to store an address can vary, making the disk content vary. As the disk is only a file on the computer running the simulation, it is limited in size so more than 4 addressing bytes are not implemented. This would correspond to a disk of 64 GB with a page size of 16 bytes\footnote{This value of 16 bytes is not chosen randomly, it will be explained later.}.
 \subsection{File allocation table}
+At a fixed address on the disk, there is a space reserved for the file allocation table (FAT). This table is used to store the information about the files on the disk. \\
+It stores at least the following information:
+\begin{itemize}
+    \item A way to uniquely identify the file
+    \item The address of the first page of the file
+\end{itemize}
+and it can store more information, as will be shown later in one of the systems.
 \subsection{File identifier}
+The file identifier is, as described in the previous section, a way to uniquely identify a file. It is generally a string of characters, corresponding to the name of the file. Because this simulation aims to be efficient and it can work with a really small disk (most of the tests were done with a 4kB disk), having a string would quickly fill the disk. \\
+For this reason, the file identifier is simply a number. This number is different of zero, which is a reserved number for an empty file. To make sure that every file is can have a unique identifier, this \textbf{ID} is stored on the same number of bytes as the addressing bytes. As each file is stored on at least one page, which address holds on $A_b$ bytes, using the same number of bytes for the ID will be enough to store the ID of the file. \\
+When adding a file, the given ID is checked against the IDs found in the FAT to avoid duplicates and an error mechanism is implemented to handle this case. 
 
-
+\section{Linked list allocation system}
+\label{sec:linkedlist}
 
 
 

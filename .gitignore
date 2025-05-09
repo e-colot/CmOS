@@ -4,6 +4,8 @@ bin/*
 doc/*
 !doc/*.tex
 !doc/*.pdf
+!doc/*.cls
+!doc/pic/
 programs/bin/*
 .VSCodeCounter
 /out/
