@@ -48,10 +48,10 @@ close(h); % Close progress bar
 
 % Plot results
 figure;
-semilogy(capacities, randomAccessTimes, '-o', 'DisplayName', 'Random Access');
+semilogy(capacities*100, randomAccessTimes, '-o', 'DisplayName', 'Random Access');
 hold on;
-semilogy(capacities, continueUntilFoundTimes, '-x', 'DisplayName', 'Continue Until Found');
-xlabel('Bitmap Used Capacity (Fraction of 1s)');
+semilogy(capacities*100, continueUntilFoundTimes, '-x', 'DisplayName', 'Continue Until Found');
+xlabel('Disk used (%)');
 ylabel('Time Taken (Seconds)');
 title('Comparison of Strategies to Find a Zero in Bitmap');
 legend('Location', 'NorthWest');

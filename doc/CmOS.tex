@@ -48,7 +48,7 @@
 
 In this report, a comparison of two ways of storing files is made. There is a main focus on how those storage systems work, followed by a comparison of their performance. \\
 
-The project was initially named \textit{CmOS} for \textit{C modeled OS} as it was supposed to implement more than only a storage system. The whole code is available on github\footnote{\href{https://github.com/e-colot/CmOS}{https://github.com/e-colot/CmOS}} and one can see that the basic building blocks for a complete OS are present. It includes registers definition, a custom ISA, a compiler and an interpreter for going from assembly code to binary code and then execute it and so on, but they will not be discussed as the project objective has changed to the study of storage systems. It is a smaller topic but there is still a lot to say about it. 
+The project was initially named \textit{CmOS} for \textit{C modeled OS} as it was supposed to implement more than only a storage system. The whole code is available on github\footnote{\href{https://github.com/e-colot/CmOS}{https://github.com/e-colot/CmOS}} and one can see that the basic building blocks for a complete OS are present. It includes registers definition, a custom ISA, a compiler and an interpreter for going from assembly to binary and then execute it and so on, but they will not be discussed as the project objective has changed to the study of storage systems. It is a smaller topic but there is still a lot to say about it. 
 
 Finally, there are a few remarks:
 \begin{itemize}
@@ -104,7 +104,7 @@ A disk of 256 kB with a page size of 256 bytes will have 1024 pages and a single
 \end{equation*}
 The complexity of addressing with a variable number of bytes is that, depending on the dimensions of the disk and the page size, the place needed to store an address can vary, making the disk content vary. As the disk is only a file on the computer running the simulation, it is limited in size so more than 4 addressing bytes are not implemented. This would correspond to a disk of 64 GB with a page size of 16 bytes\footnote{This value of 16 bytes is not chosen randomly, it will be explained later.}.
 \subsection{File allocation table}
-At a fixed address on the disk, there is a space reserved for the file allocation table (FAT). This table is used to store the information about the files on the disk. \\
+Somewhere on the disk, there is a space reserved for the file allocation table (FAT). This table is used to store the information about the files on the disk. All the information related to a file will be referred to as an \textit{entry} or a \textit{file entry}.\\
 It stores at least the following information:
 \begin{itemize}
     \item A way to uniquely identify the file
@@ -115,9 +115,65 @@ and it can store more information, as will be shown later in one of the systems.
 The file identifier is, as described in the previous section, a way to uniquely identify a file. It is generally a string of characters, corresponding to the name of the file. Because this simulation aims to be efficient and it can work with a really small disk (most of the tests were done with a 4kB disk), having a string would quickly fill the disk. \\
 For this reason, the file identifier is simply a number. This number is different of zero, which is a reserved number for an empty file. To make sure that every file is can have a unique identifier, this \textbf{ID} is stored on the same number of bytes as the addressing bytes. As each file is stored on at least one page, which address holds on $A_b$ bytes, using the same number of bytes for the ID will be enough to store the ID of the file. \\
 When adding a file, the given ID is checked against the IDs found in the FAT to avoid duplicates and an error mechanism is implemented to handle this case. 
+\subsection{File terminator}
+Because the files are stored in pages, there often are bytes at the end that are not data. Because only the number of pages used to store the data is known (and not the number of bytes), there is a need to differentiate the bytes that compose the data and the ones that are not and this is the interest of having a file terminator. \\
+At the end of the file, \texttt{0x00} is added and this is the file terminator symbol. It is then followed by a padding: the rest of the page is filled with \texttt{0xFF}. If this padding was not made, there could be a risk of having another \texttt{0x00} that would be interpreted as the terminator.
 
 \section{Linked list allocation system}
 \label{sec:linkedlist}
+\subsection{Description}
+The first system is a linked list allocation system. This means that the pages of a file are not stored next to each other on the disk. Instead, each page contains at its beginning a pointer to the next page of the file. The last page has a pointer to zero, indicating that it is the last page of the file.
+\subsection{Bitmap}
+Because the pages are not stored next to each other, there is a need for a way to know which pages are free to be used and which ones are already used. It is for this reason that a bitmap is present at the beginning of the disk. \\
+Each bit of the bitmap corresponds to a page on the disk and is set to 1 if the page is used and to 0 if it is free.
+\subsection{FAT structure}
+The first FAT page is always placed right after the bitmap. As more files are added, the FAT will grow and at some point, a single page will not be enough. The next page is then chosen among the free pages (found in the bitmap) and the previous page will point to the new page. This allows the FAT to grow as needed and make this system scalable. 
+\begin{figure}[H]
+    \floatbox[{\capbeside\thisfloatsetup{capbesideposition={right,top},capbesidewidth=0.5\textwidth}}]{figure}[\FBwidth]
+    {\caption{The structure of the File Allocation Table (FAT) in the linked list allocation system.\\ It starts with $2 A_b$ bytes linking to the previous and the next FAT pages. It is then followed by \textit{entries} of $2 A_b$ each with the ID of the file and the address of the first page where the file is written.\\ Because each little box on the figure contains $A_b$ bytes and because $A_b$ is not bigger than 4, a page size smaller than 16 could lead to issues. In the case of a page size of 15 and $A_b = 4$ (with a huge disk size for instance), the first row will already use 8 out of the 15 bytes. There will then not be enough bytes left to write a single file entry in the page, making it useless}\label{fig:FAT_LL}}
+    {\includegraphics[width=0.4\textwidth]{FAT_LL.png}}
+\end{figure}
+\subsection{Finding a free page}
+For writing operations, there is often the need to find a page that is not used. Because the files must not be stored one after the other, the address returned is purely random, but it still must be an unused one. The first approach that was implemented was a \textit{Random Access} method:
+\begin{enumerate}
+    \item Take a random address < number of pages
+    \item If it is already used, go back to \textbf{1.}
+    \item If not, return the address
+\end{enumerate}
+It has been replaced later on by the \textit{Continue Until Found} method:
+\begin{enumerate}
+    \item Take a random address < number of pages
+    \item If it is already used, check the next address and go to \textbf{2.}
+    \item If not, return the address
+\end{enumerate}
+To compare the two approaches for finding a free page, a simulation was run where the disk was gradually filled, and the time taken to find a free page was recorded. The results are shown in Figure \ref{fig:findFreePageTime}. \\
+\begin{figure}
+    \centering
+    \includegraphics[width=1\textwidth]{findFreePage.eps}
+    \caption{Comparison of the time taken to find a free page as the disk fills up. This simulation was done with a toy script in Matlab, not the real system}
+    \label{fig:findFreePageTime}
+\end{figure}
+The second approach, which checks the next address sequentially, performs significantly better when the disk is nearly full, which was expected as it has the certitude of finding a free page after having searched through the whole bitmap.
+\subsection{Adding a file}
+A simplified version of the algorithm to add a file is shown on the logical diagram \ref{fig:Logic_add_LL}. There are a lot of checks to be done when adding a file and those are not included in the diagram. \\
+For instance, if no page new page is found for writing after the file entry has been put in the FAT (inside the while loop in \ref{fig:Logic_add_LL}), it means that the disk is full. However, as the file is not entirely written, it cannot stay there as it could potentially be read and it would not be the same data as what was given. The fix for it is to mark the last page as the end of the file with a pointer to 0 (see the next section to understand why it is important) and then remove the file.
+\begin{figure}
+    \centering
+    \includegraphics[width=0.8\textwidth]{Logic_add_LL.png}
+    \caption{Logical diagram of the algorithm to add a file in the linked list allocation system}
+    \label{fig:Logic_add_LL}
+\end{figure}
+\subsection{Removing a file}
+To remove a file, its entry must be removed from the FAT and all the pages used to store the file must be cleared in the bitmap. Removing the entry is straightforward: it cycles through the FAT pages and search for the ID. When found, it sets the ID to 0 to indicate that there is no more file\footnote{This is the reason why the ID 0 cannot be used by any file} and the address of the first page is stored. From there, it sets the current page as free in the bitmap and load the next page of the file (using the pointer at the start of the current page) until the next address is 0, which indicates the end of the file.
+\subsection{Loading a file}
+There is not much to say about this. It proceeds like for a page removal except that instead of marking the page free in the bitmap, it gets rid of the pointer to the next page and load the data in a buffer to be sent back.
+\subsection{FAT reorganization}
+Once in 10 times a file is removed, a FAT reorganization takes place. It will fill the holes in the first FAT pages (entries with ID = 0) with entries that are in the last pages of the FAT. This allows to empty the last FAT pages and to remove them. It frees some pages which can then be used to store more files.
+
+\section{Contiguous allocation system}
+
+
+
 
 
 
