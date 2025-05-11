@@ -48,9 +48,9 @@
 
 In this report, a comparison of two ways of storing files is made. There is a main focus on how those storage systems work, followed by a comparison of their performance. \\
 
-The project was initially named \textit{CmOS} for \textit{C modeled OS} as it was supposed to implement more than only a storage system. The whole code is available on github\footnote{\href{https://github.com/e-colot/CmOS}{https://github.com/e-colot/CmOS}} and one can see that the basic building blocks for a complete OS are present. It includes registers definition, a custom ISA, a compiler and an interpreter for going from assembly to binary and then execute it and so on, but they will not be discussed as the project objective has changed to the study of storage systems. It is a smaller topic but there is still a lot to say about it. 
+The project was initially named \textit{CmOS} for \textit{C modelled OS} as it was supposed to implement more than only a storage system. The whole code is available on github\footnote{\href{https://github.com/e-colot/CmOS}{https://github.com/e-colot/CmOS}} and one can see that the basic building blocks for a complete OS are present. It includes registers definition, a custom ISA, a compiler and an interpreter for going from assembly to binary and then execute it and so on, but they will not be discussed as the project objective has changed to the study of storage systems. It is a smaller topic but there is still a lot to say about it. 
 
-Finally, a few remarks have to be listed:
+Finally, a few remarks must be listed:
 \begin{itemize}
     \item This whole project has been built by hand with no external source. This means that the two systems are not based on any existing system but only on the knowledge acquired during the course and on some personal ideas.
     \item In the following, the terms \textit{file system} and \textit{storage system} will be used interchangeably
@@ -71,7 +71,7 @@ As everything is built from scratch, there is not a lot of prerequisite knowledg
 
 The disk is where files are stored on a computer and it can be seen as a big vector of bytes. To read or write some data, an address is given and the driver will read or write the data at that address. A real disk will often have different sectors with a longer access time when changing sectors. \\
 
-In the simulation, the disk is a file on the computer of which the size is fixed by a parameter. Because of this, there is no access time when changing sectors. However, because of paging (\ref{sec:paging}) and depending on the computer on which the simulation is run, the access time could indeed be longer when reading or writing data at addresses that are far away from each other but this is, once again, outside of the scope of this analysis. \\
+In the simulation, the disk is a file on the computer of which the size is fixed by a parameter. Because of this, there is no access time when changing sectors. However, because of paging ( see section \ref{sec:paging}) and depending on the computer on which the simulation is run, the access time could indeed be longer when reading or writing data at addresses that are far away from each other but this is, once again, outside of the scope of this analysis. \\
 
 \section{Paging}
 \label{sec:paging}
@@ -81,7 +81,7 @@ When storing data in memory, it would be inefficient to have data blocks of vary
 \section{File system}
 \label{sec:filesystem}
 
-The file system is in charge of managing the data on the disk. It is responsible for writing files, accessing written files and deleting them. It might have additional features but those are sufficient for a working file system and the one built here only implement those basic operations.
+The file system is in charge of managing the data on the disk. It is responsible for writing files, accessing written files and deleting them. It might have additional features but those are sufficient for a working file system and the one built here only implements those basic operations.
 
 
 
@@ -102,9 +102,9 @@ A disk of 256 kB with a page size of 256 bytes will have 1024 pages and a single
 \begin{equation*}
     A_b = \lceil \log_2\left(\frac{\text{disk size}}{\text{page size}}\right) \rceil
 \end{equation*}
-The complexity of addressing with a variable number of bytes is that, depending on the dimensions of the disk and the page size, the place needed to store an address can vary, making the disk content vary. As the disk is only a file on the computer running the simulation, it is limited in size so more than 4 addressing bytes are not implemented. This would correspond to a disk of 64 GB with a page size of 16 bytes\footnote{This value of 16 bytes is not chosen randomly, it will be explained later.}.
+The complexity of addressing with a variable number of bytes is that, depending on the dimensions of the disk and the page size, the place needed to store an address can vary, making the disk content vary. As the disk is only a file on the computer running the simulation, it is limited in size so more than 4 addressing bytes are not implemented. This would correspond to a disk of 64 GB with a page size of 16 bytes\footnote{This value of 16 bytes is not chosen randomly, it will be explained in figure \ref{fig:FAT_LL}.}.
 \subsection{File allocation table}
-At a fixed address on the disk, there is a space reserved for the file allocation table (FAT). This table is used to store the information about the files on the disk. \\
+At a fixed address on the disk, there is a space reserved for the file allocation table (FAT). This table is used to store information about the files on the disk. \\
 It stores at least the following information:
 \begin{itemize}
     \item A way to uniquely identify the file
@@ -116,7 +116,7 @@ The file identifier is, as described in the previous section, a way to uniquely 
 For this reason, the file identifier is simply a number. This number is different of zero, which is a reserved number for an empty file. To make sure that every file is can have a unique identifier, this \textbf{ID} is stored on the same number of bytes as the addressing bytes. As each file is stored on at least one page, which address holds on $A_b$ bytes, using the same number of bytes for the ID will be enough to store the ID of the file. \\
 When adding a file, the given ID is checked against the IDs found in the FAT to avoid duplicates and an error mechanism is implemented to handle this case. 
 \subsection{File terminator}
-Because the files are stored in pages, there often are bytes at the end that are not data. Because only the number of pages used to store the data is known (and not the number of bytes), there is a need to differentiate the bytes that compose the data and the ones that are not and this is the interest of having a file terminator. \\
+Because the files are stored in pages, there often are bytes at the end that are not data ,and because only the number of pages used to store the data is known (and not the number of bytes), there is a need to differentiate the bytes that compose the data and the ones that are not and this is the interest of having a file terminator. \\
 At the end of the file, \texttt{0x00} is added and this is the file terminator symbol. It is then followed by a padding: the rest of the page is filled with \texttt{0xFF}. If this padding was not made, there could be a risk of having another \texttt{0x00} that would be interpreted as the terminator.
 
 \section{Linked list allocation system}
@@ -196,7 +196,7 @@ The algorithm to add a file is quite different from the one used in the linked l
     \caption{Logical diagram of the algorithm to add a file in the contiguous allocation system}
     \label{fig:Logic_add_CA}
 \end{figure}
-The disk defragmentation will be detailed in a later section but it allows to make more space available on the disk. The \textit{in-between} check is to see if the file can be added between two files.  
+The disk defragmentation will be detailed in section \ref{sec:defragmentation} but it allows to make more space available on the disk. The \textit{in-between} check is to see if the file can be added between two files.  
 One among the checks that is not shown in the diagram is for instance the check to see if adding the file will not make the FAT collide with it. Just finding the number of pages that are used by the FAT is a quite complex task. Even if the file fits between the last file and the FAT, it could be that adding the entry will make the FAT grow and then collide with the file. It might be a bit tricky so the figure \ref{fig:FAT_collision} shows in 3 steps how such issue could arise. \\
 \begin{figure}
     \centering
@@ -210,6 +210,7 @@ Every entry from the previous entry location to the end of the FAT must be shift
 \subsection{Loading a file}
 Loading a file is done by reading the entry in the FAT and loading the pages that are needed. The number of pages to load is stored in the entry so it is straightforward.
 \subsection{Disk defragmentation}
+\label{sec:defragmentation}
 In two scenarios, no file can be added to the disk if no defragmentation is done:
 \begin{figure}[H]
     \centering
@@ -223,7 +224,7 @@ The objective of the disk defragmentation is to remove any gaps between files on
     \item If the end of the actual file is before the last page, move the file to the end of the disk and update the FAT entry with the new address
     \item Repeat \textbf{2.} for the next file
 \end{enumerate}
-This process is the equivalent of the \textit{FAT reorganization} in the linked list allocation system. As it is a way of cleaning the disk. The difference is that the FAT reorganization is a lighter process and even if not done, the system will work fine whereas with no defragmentation, the second scenario in figure \ref{fig:defrag} will brick the system until \textit{File 1} is removed. \\
+This process is the equivalent of the \textit{FAT reorganization} in the linked list allocation system. As it is a way of cleaning the disk. The difference is that the FAT reorganization is a lighter process and even if not done, the system will work fine, whereas the second scenario in figure \ref{fig:defrag} will brick the system until \textit{File 1} is removed if without defragmentation. \\
 
 
 
@@ -233,7 +234,8 @@ This process is the equivalent of the \textit{FAT reorganization} in the linked 
 
 
 \chapter{Testing the systems}
-Both systems have been tested in multiple cases. As the way of addressing changes depending on the disk size and the page size, tests have been done with different combinations of those two parameters to see how the systems behave for all the possible addressing bytes values.\\
+Both systems have been tested in multiple cases. As the way of addressing changes depending on the disk size and the page size, tests have been done with different combinations of those two parameters to see how the systems behave for all the possible addressing bytes values.
+\vspace{0.5cm}\\
 The test scenario is as follow:
 \begin{itemize}
     \item A few files are created on the computer running the simulation with different sizes
@@ -246,7 +248,7 @@ The test scenario is as follow:
     \item A random number of files are added one more time
     \item All files are checked again
 \end{itemize}
-To check the stored files, the computer simulating the file systems stores what ID's are given to which file. The ID of the files that have been stored are compared with the ones in the FAT to make sure every file is stored and no removed file is left in the FAT. The data integrity is also checked by comparing the first, the last and 10 randomly placed bytes between the original file and the one stored by the simulation.
+To check the stored files, the computer simulating the file systems stores which ID's are given to which file. The ID of the files that have been stored are compared with the ones in the FAT to make sure every file is stored and no removed file is left in the FAT. The data integrity is also checked by comparing the first, the last and 10 randomly placed bytes between the original file and the one stored by the simulation.
 
 
 
@@ -260,7 +262,7 @@ To check the stored files, the computer simulating the file systems stores what 
 
 
 \chapter{Experimental results}
-Two experiments have been done to compare the two systems. Every measurement has been done 50 times and xas then averaged. This is because the experiments include some randomness which could lead to different results. \\
+Two experiments have been done to compare the two systems. Every measurement has been done 50 times and the measurements were then averaged. This is because the experiments include some randomness which could lead to different results. \\
 Both of the experiments have been done with a disk size of 16kB and a page size varying from 16 bytes to 512 bytes. The operations used are similar to the ones made during the tests:
 \begin{itemize}
     \item Adding a random number of files
@@ -287,11 +289,11 @@ The first experiment is to fill the disk with files and then empty it. The time 
 The first experiment shows that both for filling and emptying the disk, the contiguous allocation system is 3 times faster than the linked list allocation system for a small page size. This is easily explained by the fact that the linked list allocation system has to go through the bitmap to find a free page and then write the pointer to the next page in the file. \\
 However, as the page size increases, the performance of the two systems becomes similar. Indeed, if the file fits in a single page, the contiguous allocation system will not be much faster than the linked list allocation system. \\
 \textbf{Note: } The time taken to fill the disk in a contiguous allocation system should be constant as the files are stored one after the other. It is, however, not the case and this is probably due to the fact that to store data from the simulating computer to the disk, the data is copied in a buffer and then written to the disk. This buffer was chosen to have the same size as the page size. This means that when the page size is small, the buffer is small and the time taken to write it to the disk is longer. \\
-Concerning the erasing time, The contiguous allocation system is also the fastest and the time needed to erase the disk is almost constant. This is because removing a file is done by removing the entry in the FAT. \\
+Concerning the erasing time, the contiguous allocation system is also the fastest and the time needed to erase the disk is almost constant. This is because removing a file is done by removing the entry in the FAT. \\
 It is a much complex task for the linked list allocation system as it has to go through the pages of the file to mark them as free in the bitmap. This is why the time taken to erase the disk is not constant and decreases with the page size as a single file will take less pages. \\
 \section{Experiment 2}
 \subsection{Description}
-The second experiment aims to measure the writing data rate and the disk usage depending on the page size. This is done by first filling the disk and then removing a few of them. The disk is then filled again and the time taken to achieve this is measured. The results are shown in figure \ref{fig:normalOP}. \\
+The second experiment aims to measure the writing data rate and the disk usage depending on the page size. This is done by first filling the disk and then removing a few files. The disk is then filled again and the time taken for this last operation is measured. The results are shown in figure \ref{fig:normalOP}. \\
 To determine the disk usage, the number of bytes coming from files stored on the disk is divided by the capacity of the disk. This allows to avoid taking into account the bytes written by the storage system itself such as FAT pages, pointers for linked list allocation system, etc. \\
 \begin{figure}
     \centering
@@ -300,7 +302,7 @@ To determine the disk usage, the number of bytes coming from files stored on the
     \label{fig:normalOP}
 \end{figure}
 \section{Interpretation of the results}
-The results of figure \ref{fig:normalOP} show values for a realistic use of the system. The previous experiment was advantaging the contiguous allocation system because the first fill of the disk will result in files being stored one after the other. This is not the case in this experiment as files are removed in between. This means the defragmentation process, which was heavy, will be used. This new test setup has no impact on the performance of the linked list allocation system.\\
+The results of figure \ref{fig:normalOP} show values for a realistic use of the system. The previous experiment was advantaging the contiguous allocation system because the first fill of the disk will result in files being stored one after the other. This is not the case in the second experiment as files are removed in between. This means the defragmentation process, which was heavy, will be used. This new test setup has no impact on the performance of the linked list allocation system.\\
 The linked list allocation system sees an increase in the writing data rate as the page size increases. As explained in the previous section, a single file will take less pages and the time taken to write it to the disk is shorter. The contiguous allocation system, on the other hand, sees close to no increase in the writing data rate. This is because, no matter the page size, every file that is added first needs to check if it can be added between two files and will then call the defragmentation process. Those two operations are not depending on the page size but on the number of files on the disk. \\
 The disk usage is quite similar for both systems. It sees a decease when the page size increases. This is because the number of pages used to store a file must be an integer and every byte that is not used in the last page is wasted. An interesting point is that the disk usage of linked list allocation starts $5\%$ lower than the contiguous allocation before joining it around a page size of 64 bytes. This is because for every page, the linked list allocation system has to store a pointer to the next page and this wasted space will be heavily depending on the number of pages used. A more significant difference was expected for a page size of 16 and 32 bytes as the number of addressing bytes is 2 in these cases, multiplying the number of bytes used for every single pointer by a factor 2. \\
 The following calculations can convince anyone that the disk usage of the linked list system can never beat the one of the contiguous allocation system (except when the sizes of the files are convenient):
