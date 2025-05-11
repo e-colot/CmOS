@@ -48,9 +48,9 @@
 
 In this report, a comparison of two ways of storing files is made. There is a main focus on how those storage systems work, followed by a comparison of their performance. \\
 
-The project was initially named \textit{CmOS} for \textit{C modeled OS} as it was supposed to implement more than only a storage system. The whole code is available on github\footnote{\href{https://github.com/e-colot/CmOS}{https://github.com/e-colot/CmOS}} and one can see that the basic building blocks for a complete OS are present. It includes registers definition, a custom ISA, a compiler and an interpreter for going from assembly code to binary code and then execute it and so on, but they will not be discussed as the project objective has changed to the study of storage systems. It is a smaller topic but there is still a lot to say about it. 
+The project was initially named \textit{CmOS} for \textit{C modelled OS} as it was supposed to implement more than only a storage system. The whole code is available on github\footnote{\href{https://github.com/e-colot/CmOS}{https://github.com/e-colot/CmOS}} and one can see that the basic building blocks for a complete OS are present. It includes registers definition, a custom ISA, a compiler and an interpreter for going from assembly code to binary code and then execute it and so on, but they will not be discussed as the project objective has changed to the study of storage systems. It is a smaller topic but there is still a lot to say about it. 
 
-Finally, there are a few remarks:
+Finally, a few remarks have to be listed:
 \begin{itemize}
     \item This whole project has been built by hand with no external source. This means that the two systems are not based on any existing system but only on the knowledge acquired during the course and on some personal ideas.
     \item In the following, the terms \textit{file system} and \textit{storage system} will be used interchangeably
@@ -64,14 +64,14 @@ Finally, there are a few remarks:
 
 \chapter{Background}
 
-As everything is built from scratch, there is not a lot of prerequisite knowledge needed to understand this report. However, a few concepts are important to understand how the two systems work.
+As everything is built from scratch, there is not a lot of prerequisite knowledge needed to understand this report. However, a few concepts are important in order to understand how the two systems work.
 
 \section{disk}
 \label{sec:disk}
 
 The disk is where files are stored on a computer and it can be seen as a big vector of bytes. To read or write some data, an address is given and the driver will read or write the data at that address. A real disk will often have different sectors with a longer access time when changing sectors. \\
 
-In the simulation, the disk is a file on the computer of which the size is fixed by a parameter. Because of this, there is no access time when changing sectors. However, because of paging (which will be explained later) and depending on the computer on which the simulation is run, the access time could indeed be longer when reading or writing data at addresses that are far away from each other but this is, once again, outside of the scope of this analysis. \\
+In the simulation, the disk is a file on the computer of which the size is fixed by a parameter. Because of this, there is no access time when changing sectors. However, because of paging (\ref{sec:paging}) and depending on the computer on which the simulation is run, the access time could indeed be longer when reading or writing data at addresses that are far away from each other but this is, once again, outside of the scope of this analysis. \\
 
 \section{Paging}
 \label{sec:paging}
@@ -91,7 +91,7 @@ The file system is in charge of managing the data on the disk. It is responsible
 
 \chapter{Description of the storage systems}
 
-\section{generalities}
+\section{Generalities}
 \subsection{Variable page size}
 As described in section \ref{sec:paging}, both file systems will use paging to store data. The page size is variable and can be set when creating the file system. Building a variable page size system is not a difficult task unless it aims to be efficient. Both of the systems built here have been designed to be efficient so this single feature has doubled the development time.
 \subsection{Folders}
@@ -104,7 +104,7 @@ A disk of 256 kB with a page size of 256 bytes will have 1024 pages and a single
 \end{equation*}
 The complexity of addressing with a variable number of bytes is that, depending on the dimensions of the disk and the page size, the place needed to store an address can vary, making the disk content vary. As the disk is only a file on the computer running the simulation, it is limited in size so more than 4 addressing bytes are not implemented. This would correspond to a disk of 64 GB with a page size of 16 bytes\footnote{This value of 16 bytes is not chosen randomly, it will be explained later.}.
 \subsection{File allocation table}
-At a fixed address on the disk, there is a space reserved for the file allocation table (FAT). This table is used to store the information about the files on the disk. \\
+At a fixed address on the disk, there is a space reserved for the file allocation table (FAT). This table is used to store information about the files on the disk. \\
 It stores at least the following information:
 \begin{itemize}
     \item A way to uniquely identify the file
